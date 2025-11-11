@@ -51,7 +51,7 @@ SWEP.Secondary.DefaultClip = 0
 
 SWEP:RegisterServerToClient('STCStart')
 SWEP:RegisterClientToServer('CTSFinish')
-SWEP:RegisterClientToServer('CTSExecute')
+SWEP:RegisterClientToServer('CTSExecuteRequest')
 SWEP:RegisterServerToClient('STCExecute')
 SWEP:RegisterClientToServer('CTSBreak')
 
@@ -63,19 +63,23 @@ function SWEP:STCStart()
 		surface.PlaySound('hitman/start.mp3')
 		self:ParticleEffect()
 		self:ScreenFlash(150, 0, 0.2)
+		self.marks = {}
 	end
 end
 
-function SWEP:CTSExecute()
+function SWEP:CTSExecuteRequest()
+	self.State = 'EXECUTE_REQUESTING'
 	if SERVER then
-		self:TimeScaleFadeIn(1, 0.3)
-		self:CallDoubleEnd('STCFinish')
+		self:TimeScaleFadeIn(0.3, 0)
+		self:CallDoubleEnd('STCExecute')
 	end
 end
 
 function SWEP:STCExecute()
 	self.State = 'EXECUTE'
 	if CLIENT then
+		self.targetCheck = nil
+		self:AutoAim()
 		surface.PlaySound('hitman/execute.mp3')
 	end
 end
@@ -122,6 +126,33 @@ function SWEP:Think()
 		end
 		self.attack2Key = owner:KeyDown(IN_ATTACK2)
 	end
+
+	if self.State == 'EXECUTE' then
+		if not self.marks or #self.marks < 1 then
+			self:CallDoubleEnd('CTSFinish')
+			return
+		end
+
+		local targetCheck = self:CheckTarget()
+		print(targetCheck, self.targetCheck)
+		local needShoot = not targetCheck and self.targetCheck
+		if needShoot then
+			if self:Fire() then
+				needShoot = false
+				table.remove(self.marks, #self.marks)
+			else
+				return
+			end
+		end
+
+		if not targetCheck then
+			local mark = self.marks[#self.marks]
+			self:AutoAim(mark.pos, mark.ent, 0.1, true)
+		end
+
+		self.targetCheck = targetCheck
+	end
+
 	
 	return true
 end
@@ -137,8 +168,8 @@ function SWEP:PrimaryAttack()
 end
 
 function SWEP:SecondaryAttack()
-	if CLIENT then
-		self:CallDoubleEnd('CTSExecute')
+	if CLIENT and self.State == 'START' and self.State ~= 'EXECUTE_REQUESTING' then
+		self:CallDoubleEnd('CTSExecuteRequest')
 	end
 end
 

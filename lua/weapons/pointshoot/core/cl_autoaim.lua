@@ -6,7 +6,7 @@ hook.Add('InputMouseApply', 'pointshoot.autoaim', function(cmd, x, y, ang)
     if not target then 
         return 
     end
-
+    
     timer = timer + (realTimeMode and RealFrameTime() or FrameTime())
 
     local pos = nil
@@ -24,7 +24,7 @@ hook.Add('InputMouseApply', 'pointshoot.autoaim', function(cmd, x, y, ang)
 
     local targetDir = (pos - EyePos()):Angle()
     local origin = cmd:GetViewAngles()
-    local rate = math.Clamp(timer, 0, 1) / duration
+    local rate = math.Clamp(timer / duration, 0, 1) 
     
     cmd:SetViewAngles(LerpAngle(rate, origin, targetDir))
 
