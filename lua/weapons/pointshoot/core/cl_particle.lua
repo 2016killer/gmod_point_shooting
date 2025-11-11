@@ -1,10 +1,10 @@
-function SWEP:Particle()
+function SWEP:ParticleEffect()
     local center = self:GetPos()
     local emitter = ParticleEmitter(center)
     
     for i = 1, 100 do
         local rand = VectorRand()
-        local part = emitter:Add('effects/spark', center + (rand - 0.5 * rand) * 500)
+        local part = emitter:Add('effects/spark', center + rand * 200)
         local dir = VectorRand()
         local grav =  VectorRand() * 150
         if part then

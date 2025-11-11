@@ -1,24 +1,34 @@
-if SERVER then
-	AddCSLuaFile()
-	AddCSLuaFile('core/cl_autoaim.lua')
-	AddCSLuaFile('core/cl_calcview.lua')
-	AddCSLuaFile('core/cl_drawselect.lua')
-	AddCSLuaFile('core/cl_fakehand.lua')
-	AddCSLuaFile('core/cl_fire.lua')
-	AddCSLuaFile('core/cl_flash.lua')
-	AddCSLuaFile('core/cl_particle.lua')
-	AddCSLuaFile('core/timescale.lua')
-	include('core/timescale.lua')
-else
-	include('core/cl_autoaim.lua')
-	include('core/cl_calcview.lua')
-	include('core/cl_drawselect.lua')
-	include('core/cl_fakehand.lua')
-	include('core/cl_fire.lua')
-	include('core/cl_flash.lua')
-	include('core/cl_particle.lua')
-	include('core/timescale.lua')
+local function LoadLuaFiles(dirname)
+	local path = 'weapons/pointshoot/' .. dirname .. '/'
+	local filelist = file.Find(path .. '*.lua', 'LUA')
+
+	for _, filename in pairs(filelist) do
+		client = string.StartWith(filename, 'cl_')
+		server = string.StartWith(filename, 'sv_')
+
+		if SERVER then
+			if not client then
+				include(path .. filename)
+				print('[PointShoot]: AddFile:' .. filename)
+			end
+
+			if not server then
+				AddCSLuaFile(path .. filename)
+			end
+		else
+			if client or not server then
+				include(path .. filename)
+				print('[PointShoot]: AddFile:' .. filename)
+			end
+		end
+	end
 end
+AddCSLuaFile()
+AddCSLuaFile('call.lua')
+include('call.lua')
+LoadLuaFiles('core')
+
+
 
 SWEP.Slot = 4
 SWEP.SlotPos = 99
@@ -39,42 +49,57 @@ SWEP.Primary.DefaultClip = 0
 SWEP.Secondary.ClipSize = -1
 SWEP.Secondary.DefaultClip = 0
 
+SWEP:RegisterServerToClient('STCStart')
+SWEP:RegisterClientToServer('CTSFinish')
 
-if CLIENT then
-	concommand.Add('test', function(ply)
-		print(ply:GetActiveWeapon():GetWeaponViewModel())
-	end)
+function SWEP:STCStart()
+	self.State = 'START'
+	if SERVER then
+		self:TimeScaleFadeIn(0, 0.1)
+	elseif CLIENT then
+		surface.PlaySound('hitman/start.mp3')
+		self:ParticleEffect()
+		self:ScreenFlash(150, 0, 0.2)
+	end
+end
+
+
+function SWEP:CTSFinish()
+	self.State = 'FINISH'
+	if SERVER then
+		self:TimeScaleFadeIn(1, 0.1)
+	end
 end
 
 
 function SWEP:Deploy()
-	print('fuckyou')
-	// self:ScreenFlash(150, 0, 0.2)
-
-	--get the second viewmodel
-	// local viewmodel1 = self:GetOwner():GetViewModel(1)
-	// if (IsValid(viewmodel1)) then
-	// 	--associate its weapon to us
-	// 	viewmodel1:SetWeaponModel(self.ViewModel , self)
-	// end
-	
-	// self:SendViewModelAnim(ACT_VM_DEPLOY , 1)
-	
+	if SERVER and self.StartAtOnce then
+		self:CallDoubleEnd('STCStart')
+	end
 	return true
 end
 
 function SWEP:Think()
-	print('fuckyouaaa')
-	// self:ScreenFlash(150, 0, 0.2)
+	local owner = self:GetOwner()
+	if not IsValid(owner) or not owner:IsPlayer() then 
+		return 
+	end
 
-	--get the second viewmodel
-	// local viewmodel1 = self:GetOwner():GetViewModel(1)
-	// if (IsValid(viewmodel1)) then
-	// 	--associate its weapon to us
-	// 	viewmodel1:SetWeaponModel(self.ViewModel , self)
-	// end
-	
-	// self:SendViewModelAnim(ACT_VM_DEPLOY , 1)
+	-- 单人模式客户端需要自行捕获攻击键
+	if game.SinglePlayer() and CLIENT then
+		local attackKeyDown = owner:KeyDown(IN_ATTACK)
+		
+		if not self.attackKey and attackKeyDown then
+			self:PrimaryAttack()
+		end
+		self.attackKey = owner:KeyDown(IN_ATTACK)
+
+		local attack2KeyDown = owner:KeyDown(IN_ATTACK2)
+		if not self.attack2Key and attack2KeyDown then
+			self:SecondaryAttack()
+		end
+		self.attack2Key = owner:KeyDown(IN_ATTACK2)
+	end
 	
 	return true
 end
@@ -113,12 +138,16 @@ function SWEP:SendViewModelAnim(act , index , rate)
 end
 
 function SWEP:PrimaryAttack()
-	self:SendViewModelAnim(ACT_VM_PRIMARYATTACK , 0)--target the first viewmodel
-	self:SetNextPrimaryFire(CurTime() + 0.25)
+	if SERVER and self.State ~= 'START' then
+		self:CallDoubleEnd('STCStart')
+	elseif CLIENT then
+		surface.PlaySound('hitman/mark.mp3')
+	end
 end
 
 function SWEP:SecondaryAttack()
-	self:SendViewModelAnim(ACT_VM_PRIMARYATTACK , 1)--target the second
-	self:SetNextSecondaryFire(CurTime() + 0.25)
+	if CLIENT then
+		self:CallDoubleEnd('CTSFinish')
+	end
 end
 
