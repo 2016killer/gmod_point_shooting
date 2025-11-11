@@ -1,6 +1,11 @@
 function SWEP:RegisterServerToClient(funcname)
     if not string.StartWith(funcname, 'STC') then
-        ErrorNoHalt('RegisterServerToClient: funcname must not start with STC, "%s"\n', funcname)
+        ErrorNoHalt(
+            string.format(
+                'RegisterServerToClient: funcname must not start with STC, "%s"\n', 
+                funcname
+            )
+        )
         return false
     end
 
@@ -22,7 +27,12 @@ end
 
 function SWEP:RegisterClientToServer(funcname)
     if not string.StartWith(funcname, 'CTS') then
-        ErrorNoHalt('RegisterClientToServer: funcname must not start with CTS, "%s"\n', funcname)
+        ErrorNoHalt(
+            string.format(
+                'RegisterClientToServer: funcname must not start with CTS, "%s"\n', 
+                funcname
+            )
+        )
         return false
     end
 
@@ -68,7 +78,12 @@ function SWEP:CallDoubleEnd(funcname, ...)
 
         return Base[funcname](self, ...)
     else
-        ErrorNoHalt('CallDoubleEnd: funcname must start with STC or CTS\n')
+        ErrorNoHalt(
+            string.format(
+                'CallDoubleEnd: funcname must start with STC or CTS, "%s"\n',
+                funcname
+            )
+        )
         return nil
     end
 end
