@@ -1,6 +1,5 @@
-util.AddNetworkString('PointShootTimeScaleFadeIn')
-
 if SERVER then
+    util.AddNetworkString('PointShootTimeScaleFadeIn')
     net.Receive('PointShootTimeScaleFadeIn', function(len, ply)
         local target = net.ReadFloat()
         local duration = net.ReadFloat()
