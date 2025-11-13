@@ -23,7 +23,7 @@ local function DrawMarks(self)
             end
 
             local size = self:GetMarkSize(mark)
-            local mat = self:GetMarkType(mark) == 0 and mark_mat or mark_death_mat
+            local mat = self:GetMarkType(mark) and mark_death_mat or mark_mat
 
             local realsize = Elasticity(size) * 16
             self:SetMarkSize(mark, math.Clamp(size + ds, 0, 1))

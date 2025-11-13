@@ -98,10 +98,10 @@ end
 function SWEP:GetMarkPos(mark)
     local _, lpos, ent, _ = unpack(mark)
     if not isbool(ent) and not IsValid(ent) then
-        print(lpos)
         return nil
     elseif not isbool(ent) then
-        print(lpos)
+        return ent:LocalToWorld(lpos)
+    else
         return lpos
     end
 end
