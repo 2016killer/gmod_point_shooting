@@ -49,14 +49,6 @@ SWEP.Primary.DefaultClip = 0
 SWEP.Secondary.ClipSize = -1
 SWEP.Secondary.DefaultClip = 0
 
-SWEP.BulletInfo = {
-	Spread = Vector(0, 0, 0),
-	Force = 1000,
-	Damage = 10000,
-	Num = 1,
-	Tracer = 1,
-}
-
 SWEP.MarksBatchSize = 5
 
 SWEP:RegisterServerToClient('STCStart')
@@ -67,6 +59,10 @@ SWEP:RegisterClientToServer('CTSBreak')
 SWEP:RegisterClientToServer('CTSShoot')
 SWEP:RegisterClientToServer('CTSAddMarks')
 
+
+-- ================
+-- 客户端添加标记, 每添加 MarksBatchSize 个后向服务器端同步
+-- ================
 function SWEP:CTSAddMarks(...)
 	if SERVER then
 		self.Marks = self.Marks or {}
@@ -95,9 +91,16 @@ function SWEP:STCStart()
 	self.markCount = 0
 	self.shootCount = 0
 	self.fireTime = 0
+	self.aiming = false
+
+	self.WeaponList = {
+		'tfa_silverballer',
+		'tfa_hm500'
+	}
 	if SERVER then
 		self:TimeScaleFadeIn(0, 0.1)
 	elseif CLIENT then
+		self:CreateFakeHand()
 		surface.PlaySound('hitman/start.mp3')
 		self:ParticleEffect()
 		self:ScreenFlash(150, 0, 0.2)
@@ -120,11 +123,12 @@ function SWEP:STCExecute()
 end
 
 function SWEP:CTSFinish()
-	self.State = 'FINISH'
+	self.State = nil
 	if SERVER then
 		self:TimeScaleFadeIn(1, 0.1)
 	elseif CLIENT then
 		self:ClearParticle()
+		self:CleanFakeHand()
 	end
 end
 
@@ -142,7 +146,7 @@ function SWEP:CTSShoot(count)
 end
 
 function SWEP:CheckFireAble()
-	return true
+	return RealTime() > self:GetNextPrimaryFire()
 end
 
 
@@ -219,11 +223,13 @@ hook.Add('PointShootAutoAimFinish', 'pointshoot.fire', function(wp, targetDir)
 	table.remove(wp.Marks, #wp.Marks)
 	wp.shootCount = wp.shootCount + 1
 	
-	if wp.drawtime - wp.fireTime >= 0.1 and wp.shootCount > 0 then
+	if #wp.Marks < 1 or (wp.drawtime - wp.fireTime >= 0.25 and wp.shootCount > 0) then
 		wp.fireTime = wp.drawtime
 		wp:CallDoubleEnd('CTSShoot', wp.shootCount)
 		wp.shootCount = 0
 	end
+
+	wp:SetNextPrimaryFire(RealTime() + 0.1)
 end)
 
 -- ================

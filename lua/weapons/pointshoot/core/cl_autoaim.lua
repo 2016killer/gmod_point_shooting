@@ -5,7 +5,7 @@ local timer = 0
 local SWEP = SWEP
 local wp = nil
 hook.Add('InputMouseApply', 'pointshoot.autoaim', function(cmd, x, y, ang)
-    if not target then 
+    if not target or not IsValid(wp) then 
         return 
     end
     
@@ -18,13 +18,13 @@ hook.Add('InputMouseApply', 'pointshoot.autoaim', function(cmd, x, y, ang)
         return
     end
 
-    local targetDir = (pos - EyePos()):Angle()
+    local targetDir = (pos - EyePos()):GetNormal()
     local origin = cmd:GetViewAngles()
     local rate = math.Clamp(timer / duration, 0, 1) 
     
-    cmd:SetViewAngles(LerpAngle(rate, origin, targetDir))
+    cmd:SetViewAngles(LerpAngle(rate, origin, targetDir:Angle()))
 
-    if rate == 1 then
+    if rate == 1 or origin:Forward():Dot(targetDir) > 0.9995 then
         hook.Run('PointShootAutoAimFinish', wp, targetDir)
         target, duration, timer = nil, 0, 0
     end

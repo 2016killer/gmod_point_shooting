@@ -11,43 +11,39 @@ function SWEP:ServerFire(mark)
 	end
 
 	local start = owner:EyePos()
-    local bulletInfo = self.BulletInfo
-	bulletInfo.Attacker = owner
-	bulletInfo.Inflictor = self
-	bulletInfo.Damage = 1000
-	bulletInfo.Dir = (endpos - start):GetNormal()
-	bulletInfo.Src = self:GetPos()
+	local bulletInfo = {
+		Spread = Vector(0, 0, 0),
+		Force = 1000,
+		Damage = 10000,
+		Num = 1,
+		Tracer = 0,
+		Attacker = owner,
+		Inflictor = self,
+		Damage = 1000,
+		Dir = (endpos - start):GetNormal(),
+		Src = start
+	}
 	self:FireBullets(bulletInfo)
-	debugoverlay.Sphere(endpos, 5, 2, blue)
-	debugoverlay.Line(start, endpos, 2, blue)
+	// debugoverlay.Sphere(endpos, 5, 2, blue)
+	// debugoverlay.Line(start, endpos, 2, blue)
 end
 
-function SWEP:ClientFire(mark)
+function SWEP:ClientFire(dir)
+	if not dir then return end
+
 	local vm = self:GetOwner():GetViewModel(0)
 	
-	if not IsValid(vm) then
-		return
-	end
+	if not IsValid(vm) then return end
 	
 	local seq = vm:SelectWeightedSequence(ACT_VM_PRIMARYATTACK)
 	
-	if (seq == -1) then
-		return
-	end
+	if (seq == -1) then return end
 	
-	local endpos = self:GetMarkPos(mark)
-	if not endpos then
-		return
-	end
-
 	vm:SendViewModelMatchingSequence(seq)
 	vm:SetPlaybackRate(rate or 1)
 
 	local start = EyePos()
 	
-	self:AddBulletTrail(start, endpos, 3, 200, 1000)
+	self:AddBulletTrail(start, dir, 3, 200, 1000)
 	self:EmitSound('Weapon_Pistol.Single')
-
-	debugoverlay.Sphere(endpos + Vector(0, 0, 10), 5, 2, yellow)
-	debugoverlay.Line(start, endpos + Vector(0, 0, 10), 2, yellow)
 end
