@@ -24,3 +24,35 @@ function SWEP:ParticleEffect()
 
     emitter:Finish()
 end
+
+function SWEP:EndBulletTrail()
+    if IsValid(self.emitter) then
+        self.emitter:Finish()
+    end
+end
+
+function SWEP:AddBulletTrail(start, endpos, width, len, speed, dieTime)
+    if not IsValid(self.emitter) then
+        self.emitter = ParticleEmitter(self:GetPos())
+    end
+
+    local center = self:GetPos()
+    local dir = (endpos - start):GetNormal()
+ 
+    local part = emitter:Add('models/props_c17/frostedglass_01a', start)
+    if part then
+        part:SetDieTime(dieTime or 0.5)
+
+        part:SetStartAlpha(255)
+        part:SetEndAlpha(255) 
+
+        part:SetStartSize(width)
+        part:SetEndSize(width)
+
+        part:SetStartLength(len)
+        part:SetEndLength(0)
+
+        part:SetVelocity(dir * speed)
+        part:SetAngles(dir:Angle())
+    end
+end

@@ -87,3 +87,55 @@ function SWEP:CallDoubleEnd(funcname, ...)
         return nil
     end
 end
+--[[
+    mark = {
+        ishead,
+        lpos,
+        ent,
+        size
+    }
+]]
+function SWEP:GetMarkPos(mark)
+    local _, lpos, ent, _ = unpack(mark)
+    if not isbool(ent) and not IsValid(ent) then
+        print(lpos)
+        return nil
+    elseif not isbool(ent) then
+        print(lpos)
+        return lpos
+    end
+end
+
+function SWEP:GetMarkType(mark)
+    return mark[1]
+end
+
+function SWEP:GetMarkSize(mark)
+    return mark[4]
+end
+
+function SWEP:SetMarkSize(mark, size)
+    mark[4] = size
+end
+
+function SWEP:PackMark(tr)
+    return {
+        tr.HitGroup == HITGROUP_HEAD,
+        IsValid(tr.Entity) and tr.Entity:WorldToLocal(tr.HitPos) or tr.HitPos,
+        IsValid(tr.Entity) and tr.Entity or false,
+        0
+    }
+end
+
+local function SetDrawTime(self)
+    self.drawtime = RealTime()
+    self.drawdt = self.drawtime - (self.drawtimelast or self.drawtime)
+    self.drawtimelast = self.drawtime
+end
+SWEP.DrawHUDs = {SetDrawTime}
+
+function SWEP:DrawHUD()
+    for _, func in pairs(self.DrawHUDs) do
+        func(self)
+    end
+end

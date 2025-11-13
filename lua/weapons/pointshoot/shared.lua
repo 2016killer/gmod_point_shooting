@@ -24,20 +24,20 @@ local function LoadLuaFiles(dirname)
 	end
 end
 AddCSLuaFile()
-AddCSLuaFile('call.lua')
-include('call.lua')
+AddCSLuaFile('common.lua')
+include('common.lua')
 LoadLuaFiles('core')
 
 
 
 SWEP.Slot = 4
 SWEP.SlotPos = 99
-SWEP.PrintName = 'Fake Gun'
+SWEP.PrintName = 'PointShoot'
 SWEP.Category = 'Other'
 SWEP.Author = 'Zack'
 
 SWEP.ViewModel = 'models/weapons/c_pistol.mdl'
-SWEP.WorldModel = 'models/weapons/v_pistol.mdl'
+SWEP.WorldModel = 'models/weapons/w_pistol.mdl'
 SWEP.Spawnable = true
 
 SWEP.UseHands = false
@@ -49,21 +49,37 @@ SWEP.Primary.DefaultClip = 0
 SWEP.Secondary.ClipSize = -1
 SWEP.Secondary.DefaultClip = 0
 
+SWEP.BulletInfo = {
+	Spread = Vector(0, 0, 0),
+	Force = 1000,
+	Damage = 10000
+}
+
+
 SWEP:RegisterServerToClient('STCStart')
 SWEP:RegisterClientToServer('CTSFinish')
 SWEP:RegisterClientToServer('CTSExecuteRequest')
 SWEP:RegisterServerToClient('STCExecute')
 SWEP:RegisterClientToServer('CTSBreak')
+SWEP:RegisterClientToServer('CTSAddMarks')
+
+function SWEP:CTSAddMarks(...)
+	if SERVER then
+		self.Marks = self.Marks or {}
+		table.Add(self.Marks, {...})
+	end
+end
 
 function SWEP:STCStart()
 	self.State = 'START'
 	if SERVER then
+		self.Marks = {}
 		self:TimeScaleFadeIn(0, 0.1)
 	elseif CLIENT then
 		surface.PlaySound('hitman/start.mp3')
 		self:ParticleEffect()
 		self:ScreenFlash(150, 0, 0.2)
-		self.marks = {}
+		self.Marks = {}
 	end
 end
 
@@ -78,8 +94,8 @@ end
 function SWEP:STCExecute()
 	self.State = 'EXECUTE'
 	if CLIENT then
-		self.targetCheck = nil
-		self:AutoAim()
+		self.aimIdleLast = nil
+		self:AimClear()
 		surface.PlaySound('hitman/execute.mp3')
 	end
 end
@@ -88,6 +104,22 @@ function SWEP:CTSFinish()
 	self.State = 'FINISH'
 	if SERVER then
 		self:TimeScaleFadeIn(1, 0.1)
+		if not istable(self.Marks) or #self.Marks < 1 then
+			return
+		end
+		PrintTable(self.Marks)
+		for _, mark in pairs(self.Marks) do
+			// local bulletInfo = {
+			// 	Num = 1,
+			// 	Src = mark.pos,
+			// 	Dir = (mark.pos - mark.ent:GetPos()):GetNormal(),
+			// 	Spread = Vector(0, 0, 0),
+			// 	Force = 1000,
+			// 	Damage = 1000,
+			// 	AmmoType = 'self.Primary.Ammo',
+			// }
+			// self:FireBullets(bulletInfo, suppressHostEvents=false)
+		end
 	elseif CLIENT then
 		self:DisableDrawMarks()
 	end
@@ -128,30 +160,31 @@ function SWEP:Think()
 	end
 
 	if self.State == 'EXECUTE' then
-		if not self.marks or #self.marks < 1 then
+		local aimIdle = self:AimIdle()
+		local needShoot = not aimIdle and self.aimIdleLast
+		if needShoot then
+			local pos = istable(aimIdle) and aimIdle[1] or aimIdle
+
+			if not self:Fire(pos) then
+				return
+			end
+
+			needShoot = false
+			table.remove(self.Marks, #self.Marks)
+		end
+
+		if not self.Marks or #self.Marks < 1 then
 			self:CallDoubleEnd('CTSFinish')
 			return
 		end
 
-		local targetCheck = self:CheckTarget()
-		print(targetCheck, self.targetCheck)
-		local needShoot = not targetCheck and self.targetCheck
-		if needShoot then
-			if self:Fire() then
-				needShoot = false
-				table.remove(self.marks, #self.marks)
-			else
-				return
-			end
+		if not aimIdle then
+			self:AutoAim(self.Marks[#self.Marks], 0, true)
 		end
 
-		if not targetCheck then
-			local mark = self.marks[#self.marks]
-			self:AutoAim(mark.pos, mark.ent, 0.1, true)
-		end
-
-		self.targetCheck = targetCheck
+		self.aimIdleLast = aimIdle
 	end
+
 
 	
 	return true
@@ -162,8 +195,10 @@ function SWEP:PrimaryAttack()
 		self:CallDoubleEnd('STCStart')
 	elseif CLIENT and self.State == 'START' then
 		surface.PlaySound('hitman/mark.mp3')
-		self:EnableDrawMarks()
-		self:AddMark(LocalPlayer():GetEyeTrace())
+		table.insert(self.Marks, self:PackMark(LocalPlayer():GetEyeTrace()))
+		if #self.Marks >= 5 then
+			self:CallDoubleEnd('CTSAddMarks', unpack(self.Marks, #self.Marks - 4, #self.Marks))
+		end
 	end
 end
 
