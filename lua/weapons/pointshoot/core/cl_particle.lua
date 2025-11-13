@@ -32,28 +32,3 @@ function SWEP:ClearParticle()
     end
 end
 
-function SWEP:AddBulletTrail(start, dir, width, len, speed)
-    if not IsValid(self.emitter) then
-        self.emitter = ParticleEmitter(self:GetPos())
-    end
-    local dieTime = 2
-    local emitter = self.emitter
-    local center = self:GetPos()
- 
-    local part = emitter:Add('models/props_c17/frostedglass_01a', start)
-    if part then
-        part:SetDieTime(dieTime)
-
-        part:SetStartAlpha(255)
-        part:SetEndAlpha(255) 
-
-        part:SetStartSize(width)
-        part:SetEndSize(width)
-
-        part:SetStartLength(len)
-        part:SetEndLength(0)
-
-        part:SetVelocity(dir * speed)
-        part:SetAngles(dir:Angle())
-    end
-end

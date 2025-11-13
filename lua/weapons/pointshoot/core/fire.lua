@@ -44,6 +44,5 @@ function SWEP:ClientFire(dir)
 
 	local start = EyePos()
 	
-	self:AddBulletTrail(start, dir, 3, 200, 1000)
 	self:EmitSound('Weapon_Pistol.Single')
 end

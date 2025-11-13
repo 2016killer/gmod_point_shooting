@@ -98,7 +98,7 @@ function SWEP:STCStart()
 		'tfa_hm500'
 	}
 	if SERVER then
-		self:TimeScaleFadeIn(0, 0.1)
+		self:TimeScaleFadeIn(0, 0.07)
 	elseif CLIENT then
 		self:CreateFakeHand()
 		surface.PlaySound('hitman/start.mp3')
@@ -114,23 +114,24 @@ function SWEP:STCStart()
 				table.remove(sixthsense.entqueue, i)
 				continue
 			end
-			local skeleton = ClientsideModel('models/player/skeleton.mdl', RENDERGROUP_OTHER)
-			skeleton:SetParent(ent)
-			skeleton:AddEffects(EF_BONEMERGE)
-			skeleton:SetNoDraw(true)
-			sixthsense.entqueue[i] = skeleton
+			if ent:LookupBone('ValveBiped.Bip01_Head1') then
+				local skeleton = ClientsideModel('models/player/skeleton.mdl', RENDERGROUP_OTHER)
+				skeleton:SetParent(ent)
+				skeleton:AddEffects(EF_BONEMERGE)
+				skeleton:SetNoDraw(true)
+				skeleton.remove = true
+				sixthsense.entqueue[i] = skeleton
+			end
 		end
 		local skeletonList = sixthsense.entqueue
 		timer.Simple(2, function()
-			sixthsense.color3 = Color(255, 255, 255, 255)
 			for i, skeleton in pairs(skeletonList) do
-				if not IsValid(skeleton) then
+				if not IsValid(skeleton) or not skeleton.remove then
 					continue
 				end
 				skeleton:Remove()
 			end
 		end)
-		sixthsense.color3 = Color(255, 0, 0, 255)
 		sixthsense.enable = true
 		surface.PlaySound('dishonored/darkvision_scan.wav')
 	end
@@ -205,7 +206,7 @@ function SWEP:Think()
 
 	local owner = self:GetOwner()
 	if not IsValid(owner) or not owner:IsPlayer() then 
-		return 
+		return
 	end
 
 	-- 单人模式客户端需要自行捕获攻击键
@@ -258,7 +259,7 @@ hook.Add('PointShootAutoAimFinish', 'pointshoot.fire', function(wp, targetDir)
 		wp.shootCount = 0
 	end
 
-	wp:SetNextPrimaryFire(RealTime() + 0.1)
+	wp:SetNextPrimaryFire(RealTime() + 0.05)
 end)
 
 -- ================
