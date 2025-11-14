@@ -12,10 +12,10 @@ SWEP.UseHands = false
 SWEP.ViewModelFlip = false
 SWEP.ViewModelFlip1 = true
 
-SWEP.Primary.ClipSize = 100
-SWEP.Primary.DefaultClip = 100
-SWEP.Secondary.ClipSize = 100
-SWEP.Secondary.DefaultClip = 100
+SWEP.Primary.ClipSize = 9999
+SWEP.Primary.DefaultClip = 9999
+SWEP.Secondary.ClipSize = -1
+SWEP.Secondary.DefaultClip = -1
 SWEP.PrimaryAttack = function() end
 SWEP.SecondaryAttack = function() end
 

@@ -79,10 +79,15 @@ end
 function pointshoot:Execute(ply, marks)
     if SERVER then
         ply:SelectWeapon(self:GetOriginWeapon(ply))
+        if not self.Marks[ply:EntIndex()] or #self.Marks[ply:EntIndex()] < 1 then 
+            game.SetTimeScale(1)
+            return 
+        end
 
         net.Start('PointShootExecute')
         net.Send(ply)
     elseif CLIENT then
+        if #self.Marks < 0 then return end
         local wp = self:GetOriginWeapon(LocalPlayer())
         if not IsValid(wp) then return end
         wp:SetNextPrimaryFire(0)
