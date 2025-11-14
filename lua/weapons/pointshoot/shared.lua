@@ -4,9 +4,9 @@ SWEP.PrintName = 'PointShoot'
 SWEP.Category = 'Legend'
 SWEP.Author = 'Zack'
 
-SWEP.ViewModel = 'models/weapons/c_pistol.mdl'
+SWEP.ViewModel = 'models/weapons/c_arms_citizen.mdl'
 SWEP.WorldModel = 'models/weapons/w_pistol.mdl'
-SWEP.Spawnable = true
+SWEP.Spawnable = false
 
 SWEP.UseHands = false
 SWEP.ViewModelFlip = false
@@ -71,6 +71,11 @@ function SWEP:Deploy()
     end
     self:StartEffect()
 
+    return true
+end
+
+function SWEP:Holster()
+    game.SetTimeScale(1)
     return true
 end
 
