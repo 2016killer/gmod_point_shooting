@@ -83,9 +83,14 @@ function pointshoot:Execute(ply, marks)
         net.Start('PointShootExecute')
         net.Send(ply)
     elseif CLIENT then
+        local wp = self:GetOriginWeapon(LocalPlayer())
+        if not IsValid(wp) then return end
+        wp:SetNextPrimaryFire(0)
+
         self.aiming = false
         self.shootCount = 0
         self.fireSyncTime = RealTime()
+
         hook.Add('Think', 'pointshoot.autoaim', function()
             self:AutoAim()
         end)
@@ -96,10 +101,10 @@ end
 
 
 -- ============= 鼠标控制 =============
-function pointshoot:GetWeapon(ply)
+function pointshoot:GetOriginWeapon(ply)
     if SERVER then
         local idx = ply:EntIndex()
-        local class = self.OriginWeaponClass[idx] or ply:GetNWString('PSDWeapon', 'weapon_pistol')
+        local class = self.OriginWeaponClass[idx] or 'weapon_pistol'
         local wp = ply:GetWeapon(class)
 
         if IsValid(wp) then
@@ -108,7 +113,7 @@ function pointshoot:GetWeapon(ply)
             return nil
         end
     elseif CLIENT then
-        local class = self.OriginWeaponClass or ply:GetNWString('PSDWeapon', 'weapon_pistol')
+        local class = self.OriginWeaponClass or 'weapon_pistol'
         local wp = ply:GetWeapon(class)
 
         if IsValid(wp) then
@@ -157,22 +162,23 @@ if CLIENT then
     end
 
     function pointshoot:AutoAim()
+        if not LocalPlayer():Alive() or LocalPlayer():InVehicle() then
+            hook.Remove('Think', 'pointshoot.autoaim')
+            return
+        end
+
         -- 瞄准、射击
         if not self.Marks or #self.Marks < 1 then
             hook.Remove('Think', 'pointshoot.autoaim')
             return
         end
 
-        local wp = pointshoot:GetWeapon(LocalPlayer())
-        if not wp then 
-            return 
-        end
-
-        if self.aiming or wp:GetNextPrimaryFire() > RealTime() then
+        local wp = pointshoot:GetOriginWeapon(LocalPlayer())
+        if self.aiming or (IsValid(wp) and wp:GetNextPrimaryFire() > RealTime()) then
             return
         end
 
-        self:Aim(self.Marks[#self.Marks], 1)
+        self:Aim(self.Marks[#self.Marks], 0.1)
         self.aiming = true
 
         return true
@@ -182,8 +188,16 @@ if CLIENT then
         local self = pointshoot
         self.aiming = false
 
-        local wp = LocalPlayer():GetWeapon(self.OriginWeaponClass or 'weapon_pistol')
-        self:ClientFire(wp, targetDir)
+        if not LocalPlayer():Alive() or LocalPlayer():InVehicle() then
+            return
+        end
+
+        local wp = self:GetOriginWeapon(LocalPlayer())
+        if IsValid(wp) then 
+            local wpdata = wp.ps_wpdata
+            if istable(wpdata) then wpdata.FireHandle(wp, mark) end
+        end
+        
         table.remove(self.Marks, #self.Marks)
         self.shootCount = self.shootCount + 1
         
@@ -198,24 +212,6 @@ if CLIENT then
         end
     end)
 
-    function pointshoot:ClientFire(wp)
-        if not IsValid(wp) then 
-            return 
-        end
-
-        local vm = LocalPlayer():GetViewModel()
-        
-        if not IsValid(vm) then return end
-        
-        local seq = vm:SelectWeightedSequence(ACT_VM_PRIMARYATTACK)
-        
-        if (seq == -1) then return end
-        
-        vm:SendViewModelMatchingSequence(seq)
-        vm:SetPlaybackRate(1)
-
-        wp:EmitSound('Weapon_Pistol.Single')
-    end
 elseif SERVER then
     util.AddNetworkString('PointShootFireSync')
     net.Receive('PointShootFireSync', function(len, ply)
@@ -226,7 +222,9 @@ elseif SERVER then
     function pointshoot:FireSync(ply, count)
         local idx = ply:EntIndex()
         local marks = self.Marks[idx]
-        local wp = ply:GetActiveWeapon()
+        local wp = self:GetOriginWeapon(ply)
+        if not IsValid(wp) or not wp.ps_wpdata then return end
+        
 
         local len = #marks
         if not istable(marks) or len < 1 then
@@ -234,7 +232,7 @@ elseif SERVER then
         end
         
         for i = len, math.max(len - count + 1, 1), -1 do
-            self:ServerFire(ply, wp, marks[i])
+            wp.ps_wpdata.FireHandle(wp, marks[i])
             table.remove(marks, i)
         end
     end
@@ -253,32 +251,18 @@ function pointshoot:WeaponParse(wp)
     else
         local istfa = weapons.IsBasedOn(class, 'tfa_gun_base')
         return {
-            RPM = wp.Primary.RPM,
-            Damage = wp.Primary.Damage,
-            FireHandle = wp.PrimaryAttack,
-            NextPrimaryFire = wp:GetNextPrimaryFire()
+            FireHandle = pointshoot.TFAFire
         }
     end
 end
 
-function pointshoot:TFAFire(ply, wp, mark)
+pointshoot.DefaultFire = function(wp, mark)
+    if not IsValid(wp) then return end
+    local ply = wp:GetOwner()
+    if not IsValid(ply) or not ply:IsPlayer() then return end
+    if wp:Clip1() <= 0 then return end
+
     if CLIENT then
-        if not IsValid(wp) then 
-            return 
-        end
-
-        wp:PrimaryAttack()
-    elseif SERVER then
-
-    end
-end
-
-function pointshoot:DefaultFire(ply, wp, mark)
-    if CLIENT then
-        if not IsValid(wp) then 
-            return 
-        end
-
         local vm = ply:GetViewModel()
         
         if not IsValid(vm) then return end
@@ -291,12 +275,9 @@ function pointshoot:DefaultFire(ply, wp, mark)
         vm:SetPlaybackRate(1)
 
         wp:EmitSound(wp.ps_wpdata.Sound)
+        wp:SetNextPrimaryFire(RealTime() + 1 / wp.ps_wpdata.RPM * 60)
     elseif SERVER then
-        if not IsValid(wp) then
-            return
-        end
-
-        local endpos = self:GetMarkPos(mark)
+        local endpos = pointshoot:GetMarkPos(mark)
         if not endpos then
             return
         end
@@ -317,16 +298,15 @@ function pointshoot:DefaultFire(ply, wp, mark)
         }
 
         wp:FireBullets(bulletInfo)
-        wp:SetClip1(wp:Clip1() - 1)
     end
 end
 
-function pointshoot:MeleeFire(ply, wp, mark)
-    if CLIENT then
-        if not IsValid(wp) then 
-            return 
-        end
+pointshoot.MeleeFire = function(wp, mark)
+    if not IsValid(wp) then return end
+    local ply = wp:GetOwner()
+    if not IsValid(ply) or not ply:IsPlayer() then return end
 
+    if CLIENT then
         local vm = ply:GetViewModel()
         
         if not IsValid(vm) then return end
@@ -340,10 +320,6 @@ function pointshoot:MeleeFire(ply, wp, mark)
 
         wp:EmitSound(wp.ps_wpdata.Sound)
     elseif SERVER then
-        if not IsValid(wp) then
-            return
-        end
-
         local endpos = self:GetMarkPos(mark)
         if not endpos then
             return
@@ -351,6 +327,28 @@ function pointshoot:MeleeFire(ply, wp, mark)
         local start = ply:EyePos()
         local dir = (endpos - start):GetNormal()
         ply:DropWeapon(wp, dir, dir * 5000)
+    end
+end
+
+pointshoot.TFAFire = function(wp, mark)
+    if not IsValid(wp) then return end
+    local ply = wp:GetOwner()
+    if not IsValid(ply) or not ply:IsPlayer() then return end
+    if wp:Clip1() <= 0 then return end
+
+    if CLIENT then
+        wp:SetNextPrimaryFire(0)
+        wp:PrimaryAttack()
+        wp:SetNextPrimaryFire(RealTime() + 1 / wp.Primary.RPM * 60)
+        wp:EmitSound(wp.Primary.Sound)
+    elseif SERVER then
+        // local endpos = pointshoot:GetMarkPos(mark)
+        // if not endpos then
+        //     return
+        // end
+        // local start = ply:EyePos()
+        // local dir = (endpos - start):GetNormal()
+        // ply:DropWeapon(wp, dir, dir * 5000)
     end
 end
 
@@ -400,10 +398,43 @@ pointshoot.noscriptedguns = {
     }
 }
 
-function pointshoot:Start(ply)
-    local wp = ply:GetActiveWeapon()
-    if not IsValid(wp) then
+
+if SERVER then
+    util.AddNetworkString('PointShootWeaponParse')
+
+elseif CLIENT then
+    net.Receive('PointShootWeaponParse', function()
+        local class = net.ReadString()
+        local wp = LocalPlayer():GetWeapon(class)
+        if not IsValid(wp) then
+            return
+        end
+        pointshoot.OriginWeaponClass = class
+
+        local wpdata = pointshoot:WeaponParse(wp) or pointshoot.noscriptedguns['weapon_crowbar']
+        wp.ps_wpdata = wpdata
+    end)
+end
+
+hook.Add('PlayerSwitchWeapon', 'pointshoot.weapon.parse', function(ply, oldwp, newwp)
+    if not IsValid(oldwp) or oldwp:GetClass() == 'pointshoot'then
         return
     end
 
-end
+    if not IsValid(newwp) or newwp:GetClass() ~= 'pointshoot' then
+        return
+    end
+
+    local wpdata = pointshoot:WeaponParse(oldwp)
+    if not wpdata then
+        return true
+    end
+ 
+    oldwp.ps_wpdata = wpdata
+    pointshoot.OriginWeaponClass[ply:EntIndex()] = oldwp:GetClass()
+    newwp:SetClip1(oldwp:Clip1())
+
+    net.Start('PointShootWeaponParse')
+        net.WriteString(oldwp:GetClass())
+    net.Send(ply)
+end)

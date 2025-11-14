@@ -6,7 +6,7 @@ SWEP.Author = 'Zack'
 
 SWEP.ViewModel = 'models/weapons/c_arms_citizen.mdl'
 SWEP.WorldModel = 'models/weapons/w_pistol.mdl'
-SWEP.Spawnable = false
+SWEP.Spawnable = true
 
 SWEP.UseHands = false
 SWEP.ViewModelFlip = false
@@ -53,7 +53,7 @@ LoadLuaFiles('core')
 LoadLuaFiles('effects')
 
 
--- ========= 切入时启动 =========
+
 function SWEP:Deploy()
     if SERVER then
         local owner = self:GetOwner()
@@ -75,6 +75,10 @@ function SWEP:Deploy()
 end
 
 function SWEP:Holster()
+    if CLIENT then
+        return true
+    end
+
     game.SetTimeScale(1)
     return true
 end
@@ -102,8 +106,14 @@ function SWEP:Think()
 end
 
 function SWEP:MouseLeftPress()
+    if self:Clip1() <= 0 then 
+        return
+    end
+
 	self:AddMarkFromTrace(LocalPlayer():GetEyeTrace())
     self:MarkEffect()
+
+    self:SetClip1(self:Clip1() - 1)
 end
 
 function SWEP:MouseRightPress()
