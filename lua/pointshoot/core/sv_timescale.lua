@@ -1,4 +1,4 @@
-function SWEP:TimeScaleFadeIn(target, duration)
+function pointshoot:TimeScaleFadeIn(target, duration)
     if timer.Exists('pointshoot_timescale') then
         timer.Remove('pointshoot_timescale')
     end

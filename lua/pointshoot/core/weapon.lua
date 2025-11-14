@@ -1,11 +1,13 @@
-local blue = Color(0, 150, 255)
-local yellow = Color(255, 255, 0)
-function SWEP:ServerFire(mark)
+function SWEP:ServerFire(wp, mark)
+	if not IsValid(wp) then
+		return
+	end
+
 	local endpos = self:GetMarkPos(mark)
 	if not endpos then
 		return
 	end
-	local owner = self:GetOwner()
+	local owner = wp:GetOwner()
 	if not IsValid(owner) then
 		return
 	end
@@ -23,15 +25,15 @@ function SWEP:ServerFire(mark)
 		Dir = (endpos - start):GetNormal(),
 		Src = start
 	}
-	self:FireBullets(bulletInfo)
-	// debugoverlay.Sphere(endpos, 5, 2, blue)
-	// debugoverlay.Line(start, endpos, 2, blue)
+
+	wp:FireBullets(bulletInfo)
+	wp:SetClip1(wp:Clip1() - 1)
 end
 
-function SWEP:ClientFire(dir)
+function SWEP:ClientFire(dir, rate, index)
 	if not dir then return end
 
-	local vm = self:GetOwner():GetViewModel(0)
+	local vm = self:GetOwner():GetViewModel(index)
 	
 	if not IsValid(vm) then return end
 	
@@ -42,7 +44,5 @@ function SWEP:ClientFire(dir)
 	vm:SendViewModelMatchingSequence(seq)
 	vm:SetPlaybackRate(rate or 1)
 
-	local start = EyePos()
-	
 	self:EmitSound('Weapon_Pistol.Single')
 end

@@ -1,14 +1,14 @@
-local function Elasticity(x)
+pointshoot.Marks = {}
+pointshoot.mark_mat = Material('hitman/mark.png')
+pointshoot.mark_death_mat = Material('hitman/mark_death.png')
+
+function pointshoot:Elasticity(x)
 	if x >= 1 then return 1 end
 	return x * 1.4301676 + math.sin(x * 4.0212386) * 0.55866
 end
 
-
 local white = Color(255, 255, 255)
-local mark_mat = Material('hitman/mark.png')
-local mark_death_mat = Material('hitman/mark_death.png')
-
-local function DrawMarks(self)
+function pointshoot:DrawMarks()
     local Marks = self.Marks
     if not Marks or #Marks < 1 then 
         return 
@@ -25,7 +25,7 @@ local function DrawMarks(self)
             local size = self:GetMarkSize(mark)
             local mat = self:GetMarkType(mark) and mark_death_mat or mark_mat
 
-            local realsize = Elasticity(size) * 16
+            local realsize = self:Elasticity(size) * 16
             self:SetMarkSize(mark, math.Clamp(size + ds, 0, 1))
 
             render.SetMaterial(mat)
@@ -33,7 +33,5 @@ local function DrawMarks(self)
         end
     cam.End3D()  
 end
-
-table.insert(SWEP.DrawHUDs, DrawMarks)
 
 

@@ -1,168 +1,116 @@
-local function LoadLuaFiles(dirname)
-	local path = 'weapons/pointshoot/' .. dirname .. '/'
-	local filelist = file.Find(path .. '*.lua', 'LUA')
-
-	for _, filename in pairs(filelist) do
-		client = string.StartWith(filename, 'cl_')
-		server = string.StartWith(filename, 'sv_')
-
-		if SERVER then
-			if not client then
-				include(path .. filename)
-				print('[PointShoot]: AddFile:' .. filename)
-			end
-
-			if not server then
-				AddCSLuaFile(path .. filename)
-			end
-		else
-			if client or not server then
-				include(path .. filename)
-				print('[PointShoot]: AddFile:' .. filename)
-			end
-		end
-	end
+pointshoot = pointshoot or {}
+if SERVER then
+	concommand.Add('pointshoot_print_sv', function()
+		PrintTable(self.Marks)
+	end)
+elseif CLIENT then
+	concommand.Add('pointshoot_print_cl', function()
+		PrintTable(self.Marks)
+	end)
 end
-AddCSLuaFile()
-AddCSLuaFile('common.lua')
-include('common.lua')
-LoadLuaFiles('core')
 
+pointshoot:RegisterServerToClient('STCStart')
+pointshoot:RegisterClientToServer('CTSFinish')
+pointshoot:RegisterClientToServer('CTSExecuteRequest')
+pointshoot:RegisterServerToClient('STCExecute')
+pointshoot:RegisterClientToServer('CTSBreak')
+pointshoot:RegisterClientToServer('CTSShoot')
+pointshoot:RegisterClientToServer('CTSAddMarks')
 
-
-SWEP.Slot = 4
-SWEP.SlotPos = 99
-SWEP.PrintName = 'PointShoot'
-SWEP.Category = 'Legend'
-SWEP.Author = 'Zack'
-
-SWEP.ViewModel = 'models/weapons/c_pistol.mdl'
-SWEP.WorldModel = 'models/weapons/w_pistol.mdl'
-SWEP.Spawnable = true
-
-SWEP.UseHands = false
-SWEP.ViewModelFlip = false
-SWEP.ViewModelFlip1 = true
-
-SWEP.Primary.ClipSize = -1
-SWEP.Primary.DefaultClip = 0
-SWEP.Secondary.ClipSize = -1
-SWEP.Secondary.DefaultClip = 0
-
-SWEP.MarksBatchSize = 5
-
-SWEP:RegisterServerToClient('STCStart')
-SWEP:RegisterClientToServer('CTSFinish')
-SWEP:RegisterClientToServer('CTSExecuteRequest')
-SWEP:RegisterServerToClient('STCExecute')
-SWEP:RegisterClientToServer('CTSBreak')
-SWEP:RegisterClientToServer('CTSShoot')
-SWEP:RegisterClientToServer('CTSAddMarks')
-
-
+pointshoot.STATE_START = 0
+pointshoot.STATE_EXECUTE_REQUESTING = 1
+pointshoot.STATE_EXECUTE = 2
+pointshoot.STATE_FINISH = 3
 -- ================
 -- 客户端添加标记, 每添加 MarksBatchSize 个后向服务器端同步
 -- ================
-function SWEP:CTSAddMarks(...)
-	if SERVER then
-		self.Marks = self.Marks or {}
-		table.Add(self.Marks, {...})
-	end
+pointshoot.Marks = {}
+pointshoot.State = SERVER and {} or nil
+function pointshoot:CTSAddMarks(ply, ...)
+	if CLIENT then return end
+	local idx = ply:EntIndex()
+	self.Marks[idx] = self.Marks[idx] or {}
+	table.Add(self.Marks[idx], {...})
 end
 
-function SWEP:ClientAddMark(tr)
+function pointshoot:ClientAddMark(tr)
     if SERVER then return end
     table.insert(self.Marks, self:PackMark(tr))
     self.markCount = self.markCount + 1
     
     if self.markCount >= self.MarksBatchSize then
-        self:CallDoubleEnd('CTSAddMarks', unpack(
-            self.Marks, 
-            #self.Marks - self.markCount + 1, 
-            #self.Marks
-        ))
+        self:CallDoubleEnd(
+			'CTSAddMarks', 
+			LocalPlayer(), 
+			unpack(
+				self.Marks, 
+				#self.Marks - self.markCount + 1, 
+				#self.Marks
+			)
+		)
         self.markCount = 0
     end
 end
 
-function SWEP:STCStart()
-	self.State = 'START'
-	self.Marks = {}
-	self.markCount = 0
-	self.shootCount = 0
-	self.fireTime = 0
-	self.aiming = false
-
-	self.WeaponList = {
-		'tfa_silverballer',
-		'tfa_hm500'
-	}
-	if SERVER then
-		self:TimeScaleFadeIn(0, 0.07)
+function pointshoot:CleanMark(ply)
+    if SERVER then 
+		local idx = ply:EntIndex()
+		self.Marks[idx] = {}
 	elseif CLIENT then
-		self:CreateFakeHand()
-		surface.PlaySound('hitman/start.mp3')
-		self:ParticleEffect()
-		self:ScreenFlash(150, 0, 0.2)
-
-		sixthsense:Start(LocalPlayer(), 500, 0.1, 0.5, 30, nil)
-		sixthsense.enable = false
-		
-		for i = #sixthsense.entqueue, 1, -1 do
-			local ent = sixthsense.entqueue[i]
-			if not ent:IsNPC() then
-				table.remove(sixthsense.entqueue, i)
-				continue
-			end
-			if ent:LookupBone('ValveBiped.Bip01_Head1') then
-				local skeleton = ClientsideModel('models/player/skeleton.mdl', RENDERGROUP_OTHER)
-				skeleton:SetParent(ent)
-				skeleton:AddEffects(EF_BONEMERGE)
-				skeleton:SetNoDraw(true)
-				skeleton.remove = true
-				sixthsense.entqueue[i] = skeleton
-			end
-		end
-		local skeletonList = sixthsense.entqueue
-		timer.Simple(2, function()
-			for i, skeleton in pairs(skeletonList) do
-				if not IsValid(skeleton) or not skeleton.remove then
-					continue
-				end
-				skeleton:Remove()
-			end
-		end)
-		sixthsense.enable = true
-		surface.PlaySound('dishonored/darkvision_scan.wav')
+		self.Marks = {}
+		self.markCount = 0
 	end
 end
 
-function SWEP:CTSExecuteRequest(...)
+function pointshoot:CleanClientAim()
+    if SERVER then return end
+	self.shootCount = 0
+	self.fireTime = 0
+	self.aiming = false
+end
+
+function pointshoot:STCStart(ply)
+	self:CleanMark(ply)
+	self:StartEffect()
+	if SERVER then
+		local idx = ply:EntIndex()
+		self.State[idx] = self.STATE_START
+	elseif CLIENT then
+		self.State = self.STATE_START
+		self:CleanClientAim()
+	end
+end
+
+function pointshoot:CTSExecuteRequest(ply, ...)
 	self.State = 'EXECUTE_REQUESTING'
 	if SERVER then
 		self:TimeScaleFadeIn(0.3, 0)
 		self:CallDoubleEnd('STCExecute')
+	elseif CLIENT then
+		self:SetRightWeapon(self.parseList[1])
+		self:SetLeftWeapon(self.parseList[2])
 	end
 end
 
-function SWEP:STCExecute()
+function pointshoot:STCExecute()
 	self.State = 'EXECUTE'
 	if CLIENT then
 		surface.PlaySound('hitman/execute.mp3')
 	end
 end
 
-function SWEP:CTSFinish()
+function pointshoot:CTSFinish()
 	self.State = nil
 	if SERVER then
 		self:TimeScaleFadeIn(1, 0.1)
 	elseif CLIENT then
 		self:ClearParticle()
 		self:CleanFakeHand()
+		self:CleanViewModel()
 	end
 end
 
-function SWEP:CTSShoot(count)
+function pointshoot:CTSShoot(count)
 	if SERVER then
 		if not istable(self.Marks) or #self.Marks < 1 then
 			return
@@ -175,7 +123,7 @@ function SWEP:CTSShoot(count)
 	end
 end
 
-function SWEP:CheckFireAble()
+function pointshoot:CheckFireAble()
 	return RealTime() > self:GetNextPrimaryFire()
 end
 
@@ -183,7 +131,7 @@ end
 -- ================
 -- 触发标记模式 或 不做任何事
 -- ================
-function SWEP:Deploy()
+function pointshoot:Deploy()
 	local owner = self:GetOwner()
 	if not IsValid(owner) or not owner:IsPlayer() then 
 		self:Remove()
@@ -199,7 +147,7 @@ end
 -- ================
 -- 执行点射
 -- ================
-function SWEP:Think()
+function pointshoot:Think()
 	if SERVER then
 		return
 	end
@@ -265,19 +213,23 @@ end)
 -- ================
 -- 触发标记模式 或 标记
 -- ================
-function SWEP:PrimaryAttack()
-	if SERVER and self.State ~= 'START' then
+function pointshoot:PrimaryAttack()
+	if SERVER and self.State ~= 'START' and self.State ~= 'EXECUTE_REQUESTING' and self.State ~= 'EXECUTE' then
 		self:CallDoubleEnd('STCStart')
 	elseif CLIENT and self.State == 'START' then
 		surface.PlaySound('hitman/mark.mp3')
 		self:ClientAddMark(LocalPlayer():GetEyeTrace())
+		self:SetClip1(self:Clip1() - 1)
+		if self:Clip1() <= 0 then
+			self:CallDoubleEnd('CTSExecuteRequest')
+		end
 	end
 end
 
 -- ================
 -- 执行点射
 -- ================
-function SWEP:SecondaryAttack()
+function pointshoot:SecondaryAttack()
 	if CLIENT and self.State == 'START' and self.State ~= 'EXECUTE_REQUESTING' then
 		self:CallDoubleEnd('CTSExecuteRequest')
 
@@ -294,3 +246,34 @@ function SWEP:SecondaryAttack()
 	end
 end
 
+
+
+local function LoadLuaFiles(dirname)
+	local path = 'pointshoot/' .. dirname .. '/'
+	local filelist = file.Find(path .. '*.lua', 'LUA')
+
+	for _, filename in pairs(filelist) do
+		client = string.StartWith(filename, 'cl_')
+		server = string.StartWith(filename, 'sv_')
+
+		if SERVER then
+			if not client then
+				include(path .. filename)
+				print('[PointShoot]: AddFile:' .. filename)
+			end
+
+			if not server then
+				AddCSLuaFile(path .. filename)
+			end
+		else
+			if client or not server then
+				include(path .. filename)
+				print('[PointShoot]: AddFile:' .. filename)
+			end
+		end
+	end
+end
+AddCSLuaFile()
+AddCSLuaFile('pointshoot/common.lua')
+include('pointshoot/common.lua')
+LoadLuaFiles('core')

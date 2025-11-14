@@ -1,3 +1,4 @@
+if SERVER then return end
 sixthsense = sixthsense or {}
 local sixthsense = sixthsense
 concommand.Add('sixthsense_debug', function()
@@ -11,7 +12,7 @@ local sixthsense_mat = CreateMaterial('sixthsense_mat', 'UnLitGeneric', {
 	['$vertexcolor'] = 1,
 	['$alpha'] = 1
 })
-sixthsense.color1 = Color(0, 0, 0, 150)
+sixthsense.color1 = Color(0, 0, 0, 100)
 sixthsense.color2 = Color(255, 255, 255, 255)
 sixthsense.color3 = Color(255, 255, 255, 255)
 concommand.Add('sixthsense', function(ply, cmd, args)

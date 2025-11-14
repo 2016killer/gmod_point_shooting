@@ -1,4 +1,4 @@
-function SWEP:ParticleEffect()   
+function pointshoot:ParticleEffect()   
     if not IsValid(self.emitter) then
         self.emitter = ParticleEmitter(self:GetPos())
     end
@@ -26,7 +26,7 @@ function SWEP:ParticleEffect()
     end
 end
 
-function SWEP:ClearParticle()
+function pointshoot:ClearParticle()
     if IsValid(self.emitter) then
         self.emitter:Finish()
     end
