@@ -1,9 +1,9 @@
-function pointshoot:StartEffect()
+function pointshoot:StartEffect(ply)
 	if SERVER then
 		self:TimeScaleFadeIn(0, 0.07)
 	elseif CLIENT then
 		surface.PlaySound('hitman/start.mp3')
-		self:ParticleEffect()
+		self:ParticleEffect(ply)
 		self:ScreenFlash(150, 0, 0.2)
 
 		sixthsense:Start(LocalPlayer(), 500, 0.1, 0.5, 30, nil)

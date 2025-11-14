@@ -1,9 +1,9 @@
-function pointshoot:ParticleEffect()   
+function pointshoot:ParticleEffect(ply)   
     if not IsValid(self.emitter) then
-        self.emitter = ParticleEmitter(self:GetPos())
+        self.emitter = ParticleEmitter(ply:GetPos())
     end
     local emitter = self.emitter
-    local center = self:GetPos()
+    local center = ply:GetPos()
 
     for i = 1, 100 do
         local rand = VectorRand()
