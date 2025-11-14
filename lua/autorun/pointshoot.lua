@@ -62,7 +62,7 @@ end
 -- ============= 执行请求处理 =============
 function pointshoot:ExecuteEffect(ply)
     if SERVER then
-
+        pointshoot:TimeScaleFadeIn(0.3, 0.1)
     elseif CLIENT then
         surface.PlaySound('hitman/execute.mp3')
     end
@@ -78,7 +78,7 @@ end
 
 function pointshoot:Execute(ply, marks)
     if SERVER then
-        ply:SelectWeapon(self:GetWeapon(ply))
+        ply:SelectWeapon(self:GetOriginWeapon(ply))
 
         net.Start('PointShootExecute')
         net.Send(ply)
@@ -100,11 +100,25 @@ function pointshoot:Execute(ply, marks)
 end
 
 
+function pointshoot:FinishEffect(ply)
+    if SERVER then
+        game.SetTimeScale(1)
+        timer.Simple(0.5, function()
+            game.SetTimeScale(0.1)
+            timer.Simple(0.2, function()
+                game.SetTimeScale(1)
+            end)
+        end)
+    elseif CLIENT then
+        return
+    end
+end
+
 -- ============= 鼠标控制 =============
 function pointshoot:GetOriginWeapon(ply)
     if SERVER then
         local idx = ply:EntIndex()
-        local class = self.OriginWeaponClass[idx] or 'weapon_pistol'
+        local class = self.OriginWeaponClass[idx] or ''
         local wp = ply:GetWeapon(class)
 
         if IsValid(wp) then
@@ -113,7 +127,7 @@ function pointshoot:GetOriginWeapon(ply)
             return nil
         end
     elseif CLIENT then
-        local class = self.OriginWeaponClass or 'weapon_pistol'
+        local class = self.OriginWeaponClass or ''
         local wp = ply:GetWeapon(class)
 
         if IsValid(wp) then
@@ -164,12 +178,18 @@ if CLIENT then
     function pointshoot:AutoAim()
         if not LocalPlayer():Alive() or LocalPlayer():InVehicle() then
             hook.Remove('Think', 'pointshoot.autoaim')
+            net.Start('PointShootFinish')
+            net.SendToServer()
+            self:FinishEffect(LocalPlayer())
             return
         end
 
         -- 瞄准、射击
         if not self.Marks or #self.Marks < 1 then
             hook.Remove('Think', 'pointshoot.autoaim')
+            net.Start('PointShootFinish')
+            net.SendToServer()
+            self:FinishEffect(LocalPlayer())
             return
         end
 
@@ -178,7 +198,7 @@ if CLIENT then
             return
         end
 
-        self:Aim(self.Marks[#self.Marks], 0.1)
+        self:Aim(self.Marks[#self.Marks], 0.3)
         self.aiming = true
 
         return true
@@ -209,14 +229,21 @@ if CLIENT then
             net.SendToServer()
 
             self.shootCount = 0
+            if #self.Marks < 1 then wp:SetNextPrimaryFire(0) end
         end
     end)
 
 elseif SERVER then
+    util.AddNetworkString('PointShootFinish')
     util.AddNetworkString('PointShootFireSync')
+
     net.Receive('PointShootFireSync', function(len, ply)
         local count = net.ReadInt(32)
         pointshoot:FireSync(ply, count)
+    end)
+
+    net.Receive('PointShootFinish', function(len, ply)
+        pointshoot:FinishEffect(ply)
     end)
 
     function pointshoot:FireSync(ply, count)
@@ -359,9 +386,10 @@ pointshoot.noscriptedguns = {
 		Damage = 10,
         Sound = 'Weapon_Pistol.Single',
         FireHandle = pointshoot.DefaultFire,
+        SoundClear = pointshoot.DefaultSoundClear,
 	},
 	['weapon_357'] = {
-		RPM = 180,
+		RPM = 300,
 		Damage = 60,
         Sound = 'Weapon_357.Single',
         FireHandle = pointshoot.DefaultFire,
@@ -379,7 +407,7 @@ pointshoot.noscriptedguns = {
         FireHandle = pointshoot.DefaultFire,
 	},
 	['weapon_shotgun'] = {
-		RPM = 120,
+		RPM = 180,
 		Damage = 45,
         Sound = 'Weapon_Shotgun.Single',
         FireHandle = pointshoot.DefaultFire,
@@ -391,7 +419,7 @@ pointshoot.noscriptedguns = {
         FireHandle = pointshoot.DefaultFire,
 	},
     ['weapon_crowbar'] = {
-        RPM = 6000,
+        RPM = 180,
         Damage = 0,
         Sound = 'Weapon_Crowbar.Single',
         FireHandle = pointshoot.MeleeFire,
@@ -401,7 +429,6 @@ pointshoot.noscriptedguns = {
 
 if SERVER then
     util.AddNetworkString('PointShootWeaponParse')
-
 elseif CLIENT then
     net.Receive('PointShootWeaponParse', function()
         local class = net.ReadString()
@@ -415,26 +442,36 @@ elseif CLIENT then
         wp.ps_wpdata = wpdata
     end)
 end
+if SERVER then
+    hook.Add('PlayerSwitchWeapon', 'pointshoot.weapon.parse', function(ply, oldwp, newwp)
+        if not IsValid(oldwp) or oldwp:GetClass() == 'pointshoot'then
+            return
+        end
 
-hook.Add('PlayerSwitchWeapon', 'pointshoot.weapon.parse', function(ply, oldwp, newwp)
-    if not IsValid(oldwp) or oldwp:GetClass() == 'pointshoot'then
-        return
-    end
+        if not IsValid(newwp) or newwp:GetClass() ~= 'pointshoot' then
+            return
+        end
 
-    if not IsValid(newwp) or newwp:GetClass() ~= 'pointshoot' then
-        return
-    end
+        local wpdata = pointshoot:WeaponParse(oldwp)
+        if not wpdata then
+            return true
+        end
+    
+        oldwp.ps_wpdata = wpdata
+        pointshoot.OriginWeaponClass[ply:EntIndex()] = oldwp:GetClass()
+    
+        net.Start('PointShootWeaponParse')
+            net.WriteString(oldwp:GetClass())
+        net.Send(ply)
+    end)
 
-    local wpdata = pointshoot:WeaponParse(oldwp)
-    if not wpdata then
-        return true
-    end
- 
-    oldwp.ps_wpdata = wpdata
-    pointshoot.OriginWeaponClass[ply:EntIndex()] = oldwp:GetClass()
-    newwp:SetClip1(oldwp:Clip1())
+    concommand.Add('pointshoot', function(ply, cmd, args)
+        local pswp = ents.Create('pointshoot')
+        pswp:SetPos(ply:GetPos())
+        pswp:Spawn()
+        ply:PickupWeapon(pswp)
+        ply:SelectWeapon(pswp)
+    end)
 
-    net.Start('PointShootWeaponParse')
-        net.WriteString(oldwp:GetClass())
-    net.Send(ply)
-end)
+end
+

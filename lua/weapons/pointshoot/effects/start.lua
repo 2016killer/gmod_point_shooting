@@ -1,6 +1,6 @@
 function SWEP:StartEffect(ply)
 	if SERVER then
-		// self:TimeScaleFadeIn(0, 0.07)
+		pointshoot:TimeScaleFadeIn(0, 0.1)
 	elseif CLIENT then
 		surface.PlaySound('hitman/start.mp3')
 		self:ScreenFlash(150, 0, 0.2)
