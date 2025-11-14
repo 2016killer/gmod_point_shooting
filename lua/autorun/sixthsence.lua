@@ -1,4 +1,12 @@
+--[[
+    作者: 白狼
+]]
+
+
+
 if SERVER then return end
+
+
 sixthsense = sixthsense or {}
 local sixthsense = sixthsense
 concommand.Add('sixthsense_debug', function()
