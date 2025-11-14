@@ -34,6 +34,48 @@ function pointshoot:TimeScaleFadeIn(target, duration)
     end)
 end
 
+-- ============= 穿墙 =============
+function pointshoot:TracePenetration()
+    local filter = {LocalPlayer()}
+    local start = EyePos()
+
+    local dir = LocalPlayer():GetAimVector()
+    local tr = util.TraceLine({
+        start = start,
+        endpos = start + dir * 5000,
+        filter = filter,
+        mask = MASK_SHOT
+    })
+    if IsValid(tr.Entity) then
+        table.insert(filter, tr.Entity)
+    end
+    
+    debugoverlay.Line(start, tr.HitPos, 5)
+    print(tr.Entity)
+    local tr2 = util.TraceLine({
+        start = tr.HitPos + dir * 3,
+        endpos = tr.HitPos + dir * 2000,
+        filter = filter,
+        mask = MASK_SHOT
+    })
+    print(tr2.Entity)
+    debugoverlay.Line(tr.HitPos, tr2.HitPos, 5)
+
+    if not IsValid(tr2.Entity) and not IsValid(tr.Entity) then
+        return {tr}
+    end
+    local result = {}
+    if IsValid(tr.Entity) then
+        table.insert(result, tr)
+    end
+    if IsValid(tr2.Entity) then
+        table.insert(result, tr2)
+    end
+
+    return result
+end
+
+
 -- ============= 标记数据处理 =============
 function pointshoot:GetMarkPos(mark)
     local _, lpos, ent, _ = unpack(mark)
@@ -107,13 +149,8 @@ end
 
 function pointshoot:FinishEffect(ply)
     if SERVER then
-        game.SetTimeScale(1)
-        timer.Simple(0.5, function()
-            game.SetTimeScale(0.1)
-            timer.Simple(0.2, function()
-                game.SetTimeScale(1)
-            end)
-        end)
+        timer.Simple(0.2, function() game.SetTimeScale(1) end)
+        game.SetTimeScale(0.1)
     elseif CLIENT then
         return
     end
@@ -165,10 +202,11 @@ if CLIENT then
         local targetDir = (pos - EyePos()):GetNormal()
         local origin = cmd:GetViewAngles()
         local rate = math.Clamp(timer / duration, 0, 1) 
-        
+        rate = origin:Forward():Dot(targetDir) > 0.9995 and 1 or rate
+     
         cmd:SetViewAngles(LerpAngle(rate, origin, targetDir:Angle()))
 
-        if rate == 1 or origin:Forward():Dot(targetDir) > 0.9995 then
+        if rate == 1 then
             hook.Run('PointShootAimFinish', targetDir)
             target, duration, timer = nil, 0, 0
         end
@@ -428,6 +466,7 @@ pointshoot.noscriptedguns = {
         Damage = 0,
         Sound = 'Weapon_Crowbar.Single',
         FireHandle = pointshoot.MeleeFire,
+        IsMelee = true,
     }
 }
 

@@ -110,7 +110,10 @@ function SWEP:MouseLeftPress()
         return
     end
 
-	self:AddMarkFromTrace(LocalPlayer():GetEyeTrace())
+    local trs = pointshoot:TracePenetration(2)
+    for _, tr in ipairs(trs) do
+        self:AddMarkFromTrace(tr)
+    end
     self:MarkEffect()
 
     self:SetClip1(self:Clip1() - 1)
