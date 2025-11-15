@@ -208,7 +208,9 @@ if SERVER then
 
         oldwp.ps_wpdata = wpdata
         pointshoot.OriginWeaponClass[ply:EntIndex()] = oldwp:GetClass()
-    
+
+
+
         net.Start('PointShootWeaponParse')
             net.WriteString(oldwp:GetClass())
         net.Send(ply)
@@ -224,3 +226,26 @@ if SERVER then
 
 end
 
+if CLIENT then
+    concommand.Add('fixduration_cl', function(ply, cmd, args)
+        local wp = LocalPlayer():GetActiveWeapon()
+        PrintTable(wp.SequenceRateOverride)
+        wp.SequenceRateOverride = {
+            [ACT_VM_DRAW] = 200,
+            [ACT_VM_HOLSTER] = 200
+        }
+    end)
+else
+    concommand.Add('fixduration_sv', function(ply, cmd, args)
+        local wp = ply:GetActiveWeapon()
+        PrintTable(wp.SequenceRateOverride)
+        wp.SequenceRateOverride = {
+            [ACT_VM_DRAW] = 200,
+            [ACT_VM_HOLSTER] = 200
+        }
+    end)
+
+    hook.Add('TFA_AnimationRate', 'identifier', function()
+        return 1
+    end)
+end

@@ -19,8 +19,8 @@ SWEP.Secondary.DefaultClip = -1
 SWEP.PrimaryAttack = function() end
 SWEP.SecondaryAttack = function() end
 
-SWEP.DrawAmmo = false
-
+SWEP.DrawAmmo = true
+SWEP.IconOverride = 'hitman/pointshoot.jpg'
 
 local function LoadLuaFiles(dirname)
 	local path = 'weapons/pointshoot/' .. dirname .. '/'
