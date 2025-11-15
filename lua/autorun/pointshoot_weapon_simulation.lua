@@ -3,6 +3,8 @@
 ]]
 
 pointshoot = pointshoot or {}
+pointshoot.zerovec = Vector(0, 0, 0)
+
 
 function pointshoot:WeaponParse(wp)
     if not IsValid(wp) or wp:Clip1() <= 0 then 
@@ -21,17 +23,11 @@ function pointshoot:WeaponParse(wp)
     end
 end
 
-pointshoot.DefaultFire = function(wp, mark)
-    if not IsValid(wp) then return end
-    local ply = wp:GetOwner()
-    if not IsValid(ply) or not ply:IsPlayer() then return end
-    if wp:Clip1() <= 0 then return end
-
+pointshoot.DefaultFire = function(self, start, endpos, dir, attacker)
+    dir = dir or (endpos - start):GetNormal()
     if CLIENT then
-        local vm = ply:GetViewModel()
-        
+        local vm = attacker:GetViewModel()
         if not IsValid(vm) then return end
-        
         local seq = vm:SelectWeightedSequence(ACT_VM_PRIMARYATTACK)
         
         if (seq == -1) then return end
@@ -39,129 +35,141 @@ pointshoot.DefaultFire = function(wp, mark)
         vm:SendViewModelMatchingSequence(seq)
         vm:SetPlaybackRate(1)
 
-        wp:EmitSound(wp.ps_wpdata.Sound)
-        wp:SetNextPrimaryFire(RealTime() + 1 / wp.ps_wpdata.RPM * 60)
-    elseif SERVER then
-        local endpos = pointshoot:GetMarkPos(mark)
-        if not endpos then
-            return
+        self:EmitSound(self.ps_wpdata.Sound)
+        
+        if pointshoot.CVarsCache.ps_rpm_mode then
+            print('YES RPM')
+            self:SetNextPrimaryFire(RealTime() + 60 / pointshoot.CVarsCache.ps_rpm_mul / self.ps_wpdata.RPM)
+        else
+            print('nofuck RPM')
+            self:SetNextPrimaryFire(0) 
         end
 
-        local start = ply:EyePos()
+    elseif SERVER then
+        local damage = self.ps_wpdata.Damage * pointshoot.CVarsCache.ps_damage_mul
+        local damagePenetration = self.ps_wpdata.Damage * pointshoot.CVarsCache.ps_damage_penetration_mul
+
         local bulletInfo = {
-            Spread = Vector(0, 0, 0),
-            Force = nil,
-            Damage = wp.ps_wpdata.Damage,
-            Num = 1,
+            Spread = pointshoot.zerovec,
+            Force = self.ps_wpdata.Force,
+            Num = self.ps_wpdata.Num,
             Tracer = 0,
 
-            Attacker = ply,
-            Inflictor = wp,
+            Attacker = attacker,
+            Inflictor = self,
 
             Dir = (endpos - start):GetNormal(),
-            Src = start
         }
 
-        wp:FireBullets(bulletInfo)
-        bulletInfo.Damage = wp.ps_wpdata.Damage * 1
+        bulletInfo.Src = start
+        bulletInfo.Damage = damage
+        print('damage1', damage)
+        self:FireBullets(bulletInfo)
+        print('damage2', damagePenetration)
+        bulletInfo.Damage = damagePenetration
         bulletInfo.Src = endpos
-        wp:FireBullets(bulletInfo)
+        self:FireBullets(bulletInfo)
     end
 end
 
-pointshoot.MeleeFire = function(wp, mark)
-    if not IsValid(wp) then return end
-    local ply = wp:GetOwner()
-    if not IsValid(ply) or not ply:IsPlayer() then return end
-
+pointshoot.MeleeFire = function(self, start, endpos, dir, attacker)
+    dir = dir or (endpos - start):GetNormal()
     if CLIENT then
-        local vm = ply:GetViewModel()
-        
-        if not IsValid(vm) then return end
-        
-        local seq = vm:SelectWeightedSequence(ACT_VM_PRIMARYATTACK)
-        
-        if (seq == -1) then return end
-        
-        vm:SendViewModelMatchingSequence(seq)
-        vm:SetPlaybackRate(1)
 
-        wp:EmitSound(wp.ps_wpdata.Sound)
     elseif SERVER then
-        local endpos = self:GetMarkPos(mark)
-        if not endpos then
-            return
+        ply:DropWeapon(self, dir, dir * 5000)
+    end
+end
+
+pointshoot.TFAFire = function(self, start, endpos, dir, attacker)
+    dir = dir or (endpos - start):GetNormal()
+    if CLIENT then
+        self:SetNextPrimaryFire(0)
+        self:PrimaryAttack()
+        if pointshoot.CVarsCache.ps_rpm_mode then
+            print('YES RPM')
+            self:SetNextPrimaryFire(RealTime() + 60 / pointshoot.CVarsCache.ps_rpm_mul / self.Primary.RPM)
+        else
+            print('nofuck RPM')
+            self:SetNextPrimaryFire(0)
         end
-        local start = ply:EyePos()
-        local dir = (endpos - start):GetNormal()
-        ply:DropWeapon(wp, dir, dir * 5000)
-    end
-end
-
-pointshoot.TFAFire = function(wp, mark)
-    if not IsValid(wp) then return end
-    local ply = wp:GetOwner()
-    if not IsValid(ply) or not ply:IsPlayer() then return end
-    if wp:Clip1() <= 0 then return end
-
-    if CLIENT then
-        wp:SetNextPrimaryFire(0)
-        wp:PrimaryAttack()
-        wp:SetNextPrimaryFire(RealTime() + 1 / wp.Primary.RPM * 60)
-        wp:EmitSound(wp.Primary.Sound)
+        self:EmitSound(self.Primary.Sound)
     elseif SERVER then
-        // local endpos = pointshoot:GetMarkPos(mark)
-        // if not endpos then
-        //     return
-        // end
-        // local start = ply:EyePos()
-        // local dir = (endpos - start):GetNormal()
-        // ply:DropWeapon(wp, dir, dir * 5000)
+        local damage = self.Primary.Damage * pointshoot.CVarsCache.ps_damage_mul
+        local damagePenetration = self.Primary.Damage * pointshoot.CVarsCache.ps_damage_penetration_mul
+
+        local bulletInfo = {
+            Spread = pointshoot.zerovec,
+            Force = self.Primary.Force,
+            Num = self.Primary.Num,
+            Tracer = 0,
+
+            Attacker = attacker,
+            Inflictor = self,
+
+            Dir = (endpos - start):GetNormal(),
+        }
+
+        bulletInfo.Src = start
+        bulletInfo.Damage = damage
+        print('damage1', damage)
+        self:FireBullets(bulletInfo)
+        print('damage2', damagePenetration)
+        bulletInfo.Damage = damagePenetration
+        bulletInfo.Src = endpos
+        self:FireBullets(bulletInfo)
     end
 end
 
 
 pointshoot.noscriptedguns = {
 	['weapon_pistol'] = {
-		RPM = 600,
+		RPM = 600 * 1.5,
 		Damage = 10,
+        Force = 100,
         Sound = 'Weapon_Pistol.Single',
         FireHandle = pointshoot.DefaultFire,
         SoundClear = pointshoot.DefaultSoundClear,
 	},
 	['weapon_357'] = {
-		RPM = 300,
+		RPM = 300 * 1.5,
 		Damage = 60,
+        Force = 1000,
         Sound = 'Weapon_357.Single',
         FireHandle = pointshoot.DefaultFire,
 	},
 	['weapon_ar2'] = {
-		RPM = 1200,
+		RPM = 600 * 1.5,
 		Damage = 20,
+        Force = 100,
         Sound = 'Weapon_AR2.Single',
         FireHandle = pointshoot.DefaultFire,
 	},
 	['weapon_crossbow'] = {
-		RPM = 120,
+		RPM = 120 * 1.5,
 		Damage = 150,
+        Force = 1000,
         Sound = 'Weapon_Crossbow.Single',
         FireHandle = pointshoot.DefaultFire,
 	},
 	['weapon_shotgun'] = {
-		RPM = 180,
+		RPM = 180 * 1.5,
 		Damage = 45,
+        Force = 1000,
         Sound = 'Weapon_Shotgun.Single',
         FireHandle = pointshoot.DefaultFire,
 	},
 	['weapon_smg1'] = {
-		RPM = 6000,
+		RPM = 1000 * 1.5,
 		Damage = 6,
+        Force = 100,
         Sound = 'Weapon_SMG1.Single',
         FireHandle = pointshoot.DefaultFire,
 	},
     ['weapon_crowbar'] = {
-        RPM = 180,
+        RPM = 180 * 1.5,
         Damage = 0,
+        Force = 100,
         Sound = 'Weapon_Crowbar.Single',
         FireHandle = pointshoot.MeleeFire,
         IsMelee = true,

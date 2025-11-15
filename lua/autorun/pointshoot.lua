@@ -210,7 +210,7 @@ if CLIENT then
         local pos = pointshoot:GetMarkPos(target)
         if not pos then
             target = nil
-            hook.Run('PointShootAimFinish', nil)
+            hook.Run('PointShootAimFinish', nil, nil)
             return
         end
 
@@ -222,7 +222,7 @@ if CLIENT then
         cmd:SetViewAngles(LerpAngle(rate, origin, targetDir:Angle()))
 
         if rate == 1 then
-            hook.Run('PointShootAimFinish', targetDir)
+            hook.Run('PointShootAimFinish', pos, targetDir)
             target, duration, timer = nil, 0, 0
         end
     end)
@@ -262,7 +262,7 @@ if CLIENT then
         return true
     end
 
-    hook.Add('PointShootAimFinish', 'pointshoot.fire', function(targetDir)
+    hook.Add('PointShootAimFinish', 'pointshoot.fire', function(pos, dir)
         local self = pointshoot
         self.aiming = false
 
@@ -271,9 +271,8 @@ if CLIENT then
         end
 
         local wp = self:GetOriginWeapon(LocalPlayer())
-        if IsValid(wp) then 
-            local wpdata = wp.ps_wpdata
-            if istable(wpdata) then wpdata.FireHandle(wp, mark) end
+        if pos and dir and IsValid(wp) and istable(wp.ps_wpdata) and wp:Clip1() > 0 then 
+            wp.ps_wpdata.FireHandle(wp, LocalPlayer():EyePos(), pos, dir, LocalPlayer())
         end
         
         table.remove(self.Marks, #self.Marks)
@@ -309,15 +308,20 @@ elseif SERVER then
         local marks = self.Marks[idx]
         local wp = self:GetOriginWeapon(ply)
         if not IsValid(wp) or not wp.ps_wpdata then return end
-        
+
 
         local len = #marks
         if not istable(marks) or len < 1 then
             return
         end
         
+        local start = ply:EyePos()
         for i = len, math.max(len - count + 1, 1), -1 do
-            wp.ps_wpdata.FireHandle(wp, marks[i])
+            local endpos = pointshoot:GetMarkPos(marks[i])
+            if endpos then 
+                wp.ps_wpdata.FireHandle(wp, start, endpos, nil, ply)
+            end
+            
             table.remove(marks, i)
         end
     end
