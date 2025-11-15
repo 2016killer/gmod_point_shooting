@@ -1,5 +1,5 @@
-function SWEP:SetAmmo(cost)
-    self:SetClip1(tonumber(cost) or 0)
+function SWEP:SetClip(cost)
+    self.Clip = tonumber(cost) or 0
 end
 
 function SWEP:SetPowerCost(cost)
@@ -41,6 +41,13 @@ function SWEP:DrawPower()
     local w, h = scrW * 0.2, scrH * 0.05
     local x = (scrW - w) * 0.5
     local y = scrH - 2 * h
+
+
+    surface.SetFont('DermaLarge')
+	surface.SetTextColor(255, 255, 255)
+	surface.SetTextPos(x + 0.5 * w - 20, y - 50) 
+	surface.DrawText(self.Clip)
+
 	surface.SetDrawColor(170, 170, 170, alpha * 255)
 	surface.DrawOutlinedRect(x, y, w, h)
     surface.SetDrawColor(255, 255, 0, alpha * 100)

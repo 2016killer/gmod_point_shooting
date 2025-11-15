@@ -200,8 +200,7 @@ if SERVER then
             return true
         end
         
-        newwp:SetClip1(oldwp:Clip1())
-        newwp:CallOnClient('SetAmmo', oldwp:Clip1())
+        newwp:CallOnClient('SetClip', oldwp:Clip1())
         if not pointshoot.CVarsCache.ps_inf_power then
             newwp:CallOnClient('SetPowerCost', pointshoot.CVarsCache.ps_power_cost)
         end
@@ -226,26 +225,15 @@ if SERVER then
 
 end
 
-if CLIENT then
-    concommand.Add('fixduration_cl', function(ply, cmd, args)
-        local wp = LocalPlayer():GetActiveWeapon()
-        PrintTable(wp.SequenceRateOverride)
-        wp.SequenceRateOverride = {
-            [ACT_VM_DRAW] = 200,
-            [ACT_VM_HOLSTER] = 200
-        }
-    end)
-else
-    concommand.Add('fixduration_sv', function(ply, cmd, args)
-        local wp = ply:GetActiveWeapon()
-        PrintTable(wp.SequenceRateOverride)
-        wp.SequenceRateOverride = {
-            [ACT_VM_DRAW] = 200,
-            [ACT_VM_HOLSTER] = 200
-        }
-    end)
+hook.Add('TFA_AnimationRate', 'pointshoot.animationrate', function(wp, anim, rate)
 
-    hook.Add('TFA_AnimationRate', 'identifier', function()
-        return 1
-    end)
-end
+    if game.GetTimeScale() < 0.9 then
+        if SERVER then
+            return 10 * rate / game.GetTimeScale()
+        elseif CLIENT and #pointshoot.Marks > 0 then
+            return 10 *rate / game.GetTimeScale()
+        end
+    end
+
+
+end)

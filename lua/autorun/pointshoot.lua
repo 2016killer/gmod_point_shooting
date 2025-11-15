@@ -34,6 +34,12 @@ function pointshoot:TimeScaleFadeIn(target, duration)
     end)
 end
 
+function pointshoot:SetTimeScale(value)
+	if CLIENT then return end
+    timer.Remove('pointshoot_timescale')
+    game.SetTimeScale(value)
+end
+
 -- ============= 穿墙 =============
 function pointshoot:TracePenetration(dis)
     dis = dis or 4000
@@ -119,7 +125,7 @@ end
 -- ============= 执行请求处理 =============
 function pointshoot:ExecuteEffect(ply)
     if SERVER then
-        game.SetTimeScale(0.3)
+        self:SetTimeScale(0.3)
     elseif CLIENT then
         surface.PlaySound('hitman/execute.mp3')
     end
@@ -136,8 +142,8 @@ end
 function pointshoot:Execute(ply, marks)
     if SERVER then
         ply:SelectWeapon(self:GetOriginWeapon(ply))
-        if not self.Marks[ply:EntIndex()] or #self.Marks[ply:EntIndex()] < 1 then 
-            game.SetTimeScale(1)
+        if not self.Marks[ply:EntIndex()] or #self.Marks[ply:EntIndex()] < 1 then
+            self:SetTimeScale(1)
             return 
         end
 
@@ -164,11 +170,10 @@ end
 
 function pointshoot:FinishEffect(ply)
     if SERVER then
-        timer.Remove('pointshoot_timescale')
         timer.Simple(0.1, function()
-            game.SetTimeScale(1) 
+            self:SetTimeScale(1)
         end)
-        game.SetTimeScale(0.1)
+        self:SetTimeScale(0.1)
     elseif CLIENT then
         return
     end

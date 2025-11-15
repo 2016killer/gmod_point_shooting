@@ -19,7 +19,7 @@ SWEP.Secondary.DefaultClip = -1
 SWEP.PrimaryAttack = function() end
 SWEP.SecondaryAttack = function() end
 
-SWEP.DrawAmmo = true
+SWEP.DrawAmmo = false
 SWEP.IconOverride = 'hitman/pointshoot.jpg'
 
 local function LoadLuaFiles(dirname)
@@ -71,6 +71,23 @@ function SWEP:Deploy()
         self.Marks = {}
         pointshoot.Marks = {}
         self.LockThink = false
+
+        if not game.SinglePlayer() then
+            hook.Add('Think', 'PSWPThink', function()
+                if not IsValid(self) then
+                    hook.Remove('Think', 'PSWPThink')
+                    return
+                end
+
+                local wp = LocalPlayer():GetActiveWeapon()
+                if wp ~= self then
+                    hook.Remove('Think', 'PSWPThink')
+                    return
+                end
+
+                self:Think()
+            end)
+        end
     end
     self:StartEffect()
 
@@ -79,7 +96,7 @@ end
 
 function SWEP:Holster()
     if SERVER then
-        game.SetTimeScale(1)
+        pointshoot:SetTimeScale(1)
         self:CallOnClient('Holster')
     elseif CLIENT then
         self:ClearPowerCost()
@@ -96,15 +113,15 @@ function SWEP:Think()
 		return 
 	end
 
-    local attackKeyDown = owner:KeyDown(IN_ATTACK)
-    
+    local attackKeyDown = game.SinglePlayer() and owner:KeyDown(IN_ATTACK) or input.IsMouseDown(MOUSE_LEFT)
     if not self.attackKey and attackKeyDown then
         self:MouseLeftPress()
     end
-    self.attackKey = owner:KeyDown(IN_ATTACK)
+    self.attackKey = attackKeyDown
 
 
-    if owner:KeyDown(IN_ATTACK2) then
+    local rightKeyDown = game.SinglePlayer() and owner:KeyDown(IN_ATTACK2) or input.IsMouseDown(MOUSE_RIGHT)
+    if rightKeyDown then
         self.LockThink = true
         self:CallDoubleEnd('CTSExecuteRequest', self:GetLeftMasks())
         self:ClearPowerCost()
@@ -119,12 +136,12 @@ function SWEP:Think()
 end
 
 function SWEP:MouseLeftPress()
-    if self:Clip1() <= 0 then 
+    if not self.Clip or self.Clip <= 0 then 
         return
     end
 
     self:AddMarkFromTrace(pointshoot:TracePenetration())
     self:MarkEffect()
 
-    self:SetClip1(self:Clip1() - 1)
+    self.Clip = self.Clip - 1
 end

@@ -14,7 +14,7 @@ end
 function SWEP:CTSExecuteRequest(...)
     local success, err = pcall(self.ExecuteRequest, self, ...)
     if not success then
-        if SERVER then game.SetTimeScale(1) end
+        if SERVER then pointshoot:SetTimeScale(1) end
         ErrorNoHalt('[PSWP]:ExecuteRequest: ' .. err .. '\n')
     end
 end
