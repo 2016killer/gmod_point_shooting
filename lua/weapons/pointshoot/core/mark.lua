@@ -27,22 +27,28 @@ function SWEP:CTSExecuteRequest(...)
 end
 
 if CLIENT then  
-    function SWEP:AddMarkFromTrace(tr)
+    function SWEP:AddMarkFromTrace(...)
         local base = self:GetTable()
-        table.insert(self.Marks, pointshoot:PackMark(tr))
+        local total = select('#', ...)
+        for i = 1, total do
+            local tr = select(i, ...)
+            if not tr then continue end
+            
+            table.insert(self.Marks, pointshoot:PackMark(tr))
         
-        local len = #self.Marks
-        local batch = base.MarksBatchSize
-        local left = len % batch
-        if left == 0 then
-            self:CallDoubleEnd(
-                'CTSAddMarks',
-                unpack(
-                    self.Marks, 
-                    len - batch + 1, 
-                    len
+            local len = #self.Marks
+            local batch = base.MarksBatchSize
+            local left = len % batch
+            if left == 0 then
+                self:CallDoubleEnd(
+                    'CTSAddMarks',
+                    unpack(
+                        self.Marks, 
+                        len - batch + 1, 
+                        len
+                    )
                 )
-            )
+            end
         end
     end
 

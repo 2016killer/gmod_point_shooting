@@ -1,9 +1,6 @@
 --[[
     作者: 白狼
 ]]
-
-
-
 if SERVER then return end
 
 
@@ -44,7 +41,7 @@ function sixthsense:Filter(ent)
 		return false
 	end
 
-	if ent:IsNPC() or scripted_ents.GetStored(class) or ent:IsVehicle() or ent:IsWeapon() or class == 'prop_dynamic' then
+	if ent:GetMaxHealth() > 2 or ent:IsNPC() or scripted_ents.GetStored(class) or ent:IsVehicle() or ent:IsWeapon() or class == 'prop_dynamic' then
 		return true
 	end
 
