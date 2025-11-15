@@ -38,10 +38,8 @@ pointshoot.DefaultFire = function(self, start, endpos, dir, attacker)
         self:EmitSound(self.ps_wpdata.Sound)
         
         if pointshoot.CVarsCache.ps_rpm_mode then
-            print('YES RPM')
             self:SetNextPrimaryFire(RealTime() + 60 / pointshoot.CVarsCache.ps_rpm_mul / self.ps_wpdata.RPM)
         else
-            print('nofuck RPM')
             self:SetNextPrimaryFire(0) 
         end
 
@@ -63,9 +61,7 @@ pointshoot.DefaultFire = function(self, start, endpos, dir, attacker)
 
         bulletInfo.Src = start
         bulletInfo.Damage = damage
-        print('damage1', damage)
         self:FireBullets(bulletInfo)
-        print('damage2', damagePenetration)
         bulletInfo.Damage = damagePenetration
         bulletInfo.Src = endpos
         self:FireBullets(bulletInfo)
@@ -87,10 +83,8 @@ pointshoot.TFAFire = function(self, start, endpos, dir, attacker)
         self:SetNextPrimaryFire(0)
         self:PrimaryAttack()
         if pointshoot.CVarsCache.ps_rpm_mode then
-            print('YES RPM')
             self:SetNextPrimaryFire(RealTime() + 60 / pointshoot.CVarsCache.ps_rpm_mul / self.Primary.RPM)
         else
-            print('nofuck RPM')
             self:SetNextPrimaryFire(0)
         end
         self:EmitSound(self.Primary.Sound)
@@ -112,9 +106,7 @@ pointshoot.TFAFire = function(self, start, endpos, dir, attacker)
 
         bulletInfo.Src = start
         bulletInfo.Damage = damage
-        print('damage1', damage)
         self:FireBullets(bulletInfo)
-        print('damage2', damagePenetration)
         bulletInfo.Damage = damagePenetration
         bulletInfo.Src = endpos
         self:FireBullets(bulletInfo)
@@ -126,7 +118,7 @@ pointshoot.noscriptedguns = {
 	['weapon_pistol'] = {
 		RPM = 600 * 1.5,
 		Damage = 10,
-        Force = 100,
+        Force = 1,
         Sound = 'Weapon_Pistol.Single',
         FireHandle = pointshoot.DefaultFire,
         SoundClear = pointshoot.DefaultSoundClear,
@@ -134,21 +126,21 @@ pointshoot.noscriptedguns = {
 	['weapon_357'] = {
 		RPM = 300 * 1.5,
 		Damage = 60,
-        Force = 1000,
+        Force = 25,
         Sound = 'Weapon_357.Single',
         FireHandle = pointshoot.DefaultFire,
 	},
 	['weapon_ar2'] = {
 		RPM = 600 * 1.5,
 		Damage = 20,
-        Force = 100,
+        Force = 1,
         Sound = 'Weapon_AR2.Single',
         FireHandle = pointshoot.DefaultFire,
 	},
 	['weapon_crossbow'] = {
 		RPM = 120 * 1.5,
 		Damage = 150,
-        Force = 1000,
+        Force = 50,
         Sound = 'Weapon_Crossbow.Single',
         FireHandle = pointshoot.DefaultFire,
 	},
@@ -158,18 +150,19 @@ pointshoot.noscriptedguns = {
         Force = 1000,
         Sound = 'Weapon_Shotgun.Single',
         FireHandle = pointshoot.DefaultFire,
+        Num = 8,
 	},
 	['weapon_smg1'] = {
 		RPM = 1000 * 1.5,
 		Damage = 6,
-        Force = 100,
+        Force = 1,
         Sound = 'Weapon_SMG1.Single',
         FireHandle = pointshoot.DefaultFire,
 	},
     ['weapon_crowbar'] = {
         RPM = 180 * 1.5,
         Damage = 0,
-        Force = 100,
+        Force = 10000,
         Sound = 'Weapon_Crowbar.Single',
         FireHandle = pointshoot.MeleeFire,
         IsMelee = true,

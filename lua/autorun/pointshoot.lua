@@ -119,7 +119,7 @@ end
 -- ============= 执行请求处理 =============
 function pointshoot:ExecuteEffect(ply)
     if SERVER then
-        pointshoot:TimeScaleFadeIn(0.3, 0.1)
+        game.SetTimeScale(0.3)
     elseif CLIENT then
         surface.PlaySound('hitman/execute.mp3')
     end
@@ -164,7 +164,10 @@ end
 
 function pointshoot:FinishEffect(ply)
     if SERVER then
-        timer.Simple(0.2, function() game.SetTimeScale(1) end)
+        timer.Remove('pointshoot_timescale')
+        timer.Simple(0.1, function()
+            game.SetTimeScale(1) 
+        end)
         game.SetTimeScale(0.1)
     elseif CLIENT then
         return
@@ -256,7 +259,7 @@ if CLIENT then
             return
         end
 
-        self:Aim(self.Marks[#self.Marks], 0.3)
+        self:Aim(self.Marks[#self.Marks], pointshoot.CVarsCache.ps_aim_cost)
         self.aiming = true
 
         return true
