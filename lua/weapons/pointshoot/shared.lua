@@ -12,13 +12,14 @@ SWEP.UseHands = false
 SWEP.ViewModelFlip = false
 SWEP.ViewModelFlip1 = true
 
-SWEP.Primary.ClipSize = 9999
-SWEP.Primary.DefaultClip = 9999
+SWEP.Primary.ClipSize = 0
+SWEP.Primary.DefaultClip = 0
 SWEP.Secondary.ClipSize = -1
 SWEP.Secondary.DefaultClip = -1
 SWEP.PrimaryAttack = function() end
 SWEP.SecondaryAttack = function() end
-SWEP.Clock = Sound('hitman/clock.mp3')
+
+SWEP.DrawAmmo = false
 
 
 local function LoadLuaFiles(dirname)

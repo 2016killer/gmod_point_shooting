@@ -12,6 +12,14 @@ function SWEP:CTSAddMarks(...)
 end
 
 function SWEP:CTSExecuteRequest(...)
+    local success, err = pcall(self.ExecuteRequest, self, ...)
+    if not success then
+        if SERVER then game.SetTimeScale(1) end
+        ErrorNoHalt('[PSWP]:ExecuteRequest: ' .. err .. '\n')
+    end
+end
+
+function SWEP:ExecuteRequest(...)
     if SERVER then 
         local owner = self:GetOwner()
         if not IsValid(owner) or not owner:IsPlayer() then return end

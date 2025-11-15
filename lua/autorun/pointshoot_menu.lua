@@ -52,7 +52,7 @@ pointshoot.CVars = {
 
 	{
 		name = 'ps_power_cost',
-		default = '0.2',
+		default = '0.1',
 		widget = 'NumSlider',
 		min = 0,
 		max = 1,

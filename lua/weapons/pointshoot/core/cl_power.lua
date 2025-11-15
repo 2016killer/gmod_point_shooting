@@ -1,7 +1,12 @@
+function SWEP:SetAmmo(cost)
+    self:SetClip1(tonumber(cost) or 0)
+end
+
 function SWEP:SetPowerCost(cost)
     self.Power = 1
     self.PowerCost = tonumber(cost) or 0.1
     self.PowerStartTime = RealTime()
+    self.PowerTimeOutEffectLock = false
 end
 
 function SWEP:ClearPowerCost()
@@ -16,6 +21,12 @@ function SWEP:PowerThink()
     end
 
     self.Power = Lerp((RealTime() - self.PowerStartTime) * self.PowerCost, 1, 0)
+
+    if not self.PowerTimeOutEffectLock and self.Power <= self.PowerCost then
+        self:PowerTimeOutEffect()
+        self.PowerTimeOutEffectLock = true
+    end
+
     return self.Power <= 0 
 end
 
@@ -35,5 +46,10 @@ function SWEP:DrawPower()
     surface.SetDrawColor(255, 255, 0, alpha * 100)
     surface.DrawRect(x, y, w * self.Power, h)
 end
+
+function SWEP:PowerTimeOutEffect()
+    surface.PlaySound('hitman/clock.mp3')
+end
+
 
 table.insert(SWEP.DrawHUDs, SWEP.DrawPower)
