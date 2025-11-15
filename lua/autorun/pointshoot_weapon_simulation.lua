@@ -199,7 +199,10 @@ if SERVER then
         if not wpdata then
             return true
         end
-    
+        
+        if not pointshoot.CVarsCache.ps_inf_power then
+            newwp:CallOnClient('SetPowerCost', pointshoot.CVarsCache.ps_power_cost)
+        end
         oldwp.ps_wpdata = wpdata
         pointshoot.OriginWeaponClass[ply:EntIndex()] = oldwp:GetClass()
     

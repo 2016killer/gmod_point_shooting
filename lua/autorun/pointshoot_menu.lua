@@ -42,7 +42,23 @@ pointshoot.CVars = {
 		min = 0,
 		max = 5,
 		decimals = 1,
+	},
+
+	{
+		name = 'ps_inf_power',
+		default = '0',
+		widget = 'CheckBox'
+	},
+
+	{
+		name = 'ps_power_cost',
+		default = '0.2',
+		widget = 'NumSlider',
+		min = 0,
+		max = 1,
+		decimals = 1,
 	}
+
 }
 
 if SERVER then

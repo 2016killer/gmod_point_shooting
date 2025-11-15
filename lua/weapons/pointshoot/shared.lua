@@ -18,6 +18,8 @@ SWEP.Secondary.ClipSize = -1
 SWEP.Secondary.DefaultClip = -1
 SWEP.PrimaryAttack = function() end
 SWEP.SecondaryAttack = function() end
+SWEP.Clock = Sound('hitman/clock.mp3')
+
 
 local function LoadLuaFiles(dirname)
 	local path = 'weapons/pointshoot/' .. dirname .. '/'
@@ -67,7 +69,7 @@ function SWEP:Deploy()
     elseif CLIENT then
         self.Marks = {}
         pointshoot.Marks = {}
-        self.attack2KeyLock = false
+        self.LockThink = false
     end
     self:StartEffect()
 
@@ -75,16 +77,18 @@ function SWEP:Deploy()
 end
 
 function SWEP:Holster()
-    if CLIENT then
-        return true
+    if SERVER then
+        game.SetTimeScale(1)
+        self:CallOnClient('Holster')
+    elseif CLIENT then
+        self:ClearPowerCost()
     end
-
-    game.SetTimeScale(1)
+    
     return true
 end
 
 function SWEP:Think()
-	if SERVER then return end
+	if SERVER or self.LockThink then return end
 
 	local owner = self:GetOwner()
 	if not IsValid(owner) or not owner:IsPlayer() then 
@@ -99,9 +103,17 @@ function SWEP:Think()
     self.attackKey = owner:KeyDown(IN_ATTACK)
 
 
-    if not self.attack2KeyLock and owner:KeyDown(IN_ATTACK2) then
-        self:MouseRightPress()
-        self.attack2KeyLock = true
+    if owner:KeyDown(IN_ATTACK2) then
+        self.LockThink = true
+        self:CallDoubleEnd('CTSExecuteRequest', self:GetLeftMasks())
+        self:ClearPowerCost()
+        return
+    end
+
+    if self:PowerThink() then
+        self.LockThink = true
+        self:CallDoubleEnd('CTSExecuteRequest', self:GetLeftMasks())
+        self:ClearPowerCost()
     end
 end
 
@@ -114,8 +126,4 @@ function SWEP:MouseLeftPress()
     self:MarkEffect()
 
     self:SetClip1(self:Clip1() - 1)
-end
-
-function SWEP:MouseRightPress()
-    self:CallDoubleEnd('CTSExecuteRequest', self:GetLeftMasks())
 end
