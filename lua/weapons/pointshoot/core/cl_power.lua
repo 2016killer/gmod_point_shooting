@@ -1,12 +1,9 @@
-function SWEP:SetClip(cost)
-    self.Clip = tonumber(cost) or 0
-end
-
 function SWEP:SetPowerCost(cost)
     self.Power = 1
     self.PowerCost = tonumber(cost) or 0.1
     self.PowerStartTime = RealTime()
     self.PowerTimeOutEffectLock = false
+    if SERVER then self:CallOnClient('SetPowerCost', cost) end
 end
 
 function SWEP:ClearPowerCost()

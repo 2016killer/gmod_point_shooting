@@ -56,13 +56,10 @@ LoadLuaFiles('core')
 LoadLuaFiles('effects')
 
 
-
 function SWEP:Deploy()
     if SERVER then
         local owner = self:GetOwner()
-        if not IsValid(owner) or not owner:IsPlayer() then 
-            return 
-        end
+        if not IsValid(owner) or not owner:IsPlayer() then return end
         local idx = owner:EntIndex()
         self.Marks = {}
         pointshoot.Marks[idx] = {}
@@ -74,17 +71,11 @@ function SWEP:Deploy()
 
         if not game.SinglePlayer() then
             hook.Add('Think', 'PSWPThink', function()
-                if not IsValid(self) then
-                    hook.Remove('Think', 'PSWPThink')
-                    return
-                end
-
                 local wp = LocalPlayer():GetActiveWeapon()
-                if wp ~= self then
+                if not IsValid(self) or wp ~= self then
                     hook.Remove('Think', 'PSWPThink')
                     return
                 end
-
                 self:Think()
             end)
         end
@@ -95,13 +86,56 @@ function SWEP:Deploy()
 end
 
 function SWEP:Holster()
+
     if SERVER then
-        pointshoot:SetTimeScale(1)
-        self:CallOnClient('Holster')
+        local originwp, _ = self:GetOriginWeapon(ply)
+        if IsValid(originwp) then 
+            ply:SelectWeapon(originwp)
+        end
+
+        if not IsValid(originwp) or not self.Marks[ply:EntIndex()] or #self.Marks[ply:EntIndex()] < 1 then
+            self:TimeScaleFadeIn(1, nil)
+            return 
+        end
+
+        net.Start('PointShootExecute')
+        net.Send(ply)
     elseif CLIENT then
-        self:ClearPowerCost()
+        self.aiming = false
+        self.shootCount = 0
+        self.fireSyncTime = RealTime()
+
+        local originwp = self:GetOriginWeapon(LocalPlayer())
+        if not IsValid(originwp) or #self.Marks < 0 then 
+            hook.Remove('Think', 'pointshoot.autoaim')
+            return 
+        end
+
+        self.NextPrimaryFire = 0
+
+        hook.Add('Think', 'pointshoot.autoaim', function()
+            self:AutoAim()
+        end)
     end
-    
+    self:ExecuteEffect(ply)
+    // PrintTable(self.Marks)
+
+
+    if SERVER then 
+        local owner = self:GetOwner()
+        if not IsValid(owner) or not owner:IsPlayer() then return end
+        self.Marks = self.Marks or {}
+        table.Add(self.Marks, {...})
+
+        pointshoot.Marks[owner:EntIndex()] = self.Marks
+
+        pointshoot:Execute(owner)
+    elseif CLIENT then
+        pointshoot.Marks = self.Marks
+    end
+
+
+
     return true
 end
 
@@ -121,17 +155,11 @@ function SWEP:Think()
 
 
     local rightKeyDown = game.SinglePlayer() and owner:KeyDown(IN_ATTACK2) or input.IsMouseDown(MOUSE_RIGHT)
-    if rightKeyDown then
+    if rightKeyDown or self:PowerThink() then
         self.LockThink = true
         self:CallDoubleEnd('CTSExecuteRequest', self:GetLeftMasks())
         self:ClearPowerCost()
         return
-    end
-
-    if self:PowerThink() then
-        self.LockThink = true
-        self:CallDoubleEnd('CTSExecuteRequest', self:GetLeftMasks())
-        self:ClearPowerCost()
     end
 end
 
@@ -139,9 +167,7 @@ function SWEP:MouseLeftPress()
     if not self.Clip or self.Clip <= 0 then 
         return
     end
-
-    self:AddMarkFromTrace(pointshoot:TracePenetration())
+    self:CallDoubleEnd('CTSAddMarks', pointshoot:TracePenetration())
     self:MarkEffect()
-
     self.Clip = self.Clip - 1
 end

@@ -10,8 +10,10 @@ local pointshoot = pointshoot
 -- ============= 时间控制 =============
 function pointshoot:TimeScaleFadeIn(target, duration)
 	if CLIENT then return end
-    if timer.Exists('pointshoot_timescale') then
-        timer.Remove('pointshoot_timescale')
+    timer.Remove('pointshoot_timescale')
+    if duration == 0 or duration == nil then
+        game.SetTimeScale(target)
+        return
     end
 
     local StartTime = CurTime()
@@ -34,17 +36,11 @@ function pointshoot:TimeScaleFadeIn(target, duration)
     end)
 end
 
-function pointshoot:SetTimeScale(value)
-	if CLIENT then return end
-    timer.Remove('pointshoot_timescale')
-    game.SetTimeScale(value)
-end
-
 -- ============= 穿墙 =============
 function pointshoot:TracePenetration(dis)
     dis = dis or 4000
     local filter = {LocalPlayer()}
-    local start = EyePos()
+    local start = LocalPlayer():EyePos()
 
     local dir = LocalPlayer():GetAimVector()
     local tr = util.TraceLine({
@@ -66,7 +62,7 @@ function pointshoot:TracePenetration(dis)
         mask = MASK_SHOT,
         ignoreworld = true
     })
-    
+
     if tr2.Entity:IsNPC() or tr2.Entity:IsPlayer() then
         return tr2
     elseif IsValid(tr.Entity) then
@@ -122,88 +118,23 @@ function pointshoot:PackMark(tr)
     end 
 end
 
--- ============= 执行请求处理 =============
-function pointshoot:ExecuteEffect(ply)
-    if SERVER then
-        self:SetTimeScale(0.3)
-    elseif CLIENT then
-        surface.PlaySound('hitman/execute.mp3')
-    end
-end
-
-if SERVER then
-    util.AddNetworkString('PointShootExecute')
-elseif CLIENT then
-    net.Receive('PointShootExecute', function()
-        pointshoot:Execute()
-    end)
-end
-
-function pointshoot:Execute(ply, marks)
-    if SERVER then
-        ply:SelectWeapon(self:GetOriginWeapon(ply))
-        if not self.Marks[ply:EntIndex()] or #self.Marks[ply:EntIndex()] < 1 then
-            self:SetTimeScale(1)
-            return 
-        end
-
-        net.Start('PointShootExecute')
-        net.Send(ply)
-    elseif CLIENT then
-        if #self.Marks < 0 then return end
-        local wp = self:GetOriginWeapon(LocalPlayer())
-        if not IsValid(wp) then return end
-        wp:SetNextPrimaryFire(0)
-
-        self.aiming = false
-        self.shootCount = 0
-        self.fireSyncTime = RealTime()
-
-        hook.Add('Think', 'pointshoot.autoaim', function()
-            self:AutoAim()
-        end)
-    end
-    self:ExecuteEffect(ply)
-    // PrintTable(self.Marks)
-end
-
-
+-- ============= 结束 =============
 function pointshoot:FinishEffect(ply)
     if SERVER then
-        timer.Simple(0.1, function()
-            self:SetTimeScale(1)
+        timer.Simple(0.15, function()
+            self:TimeScaleFadeIn(1, nil)
         end)
-        self:SetTimeScale(0.1)
+        self:TimeScaleFadeIn(0.1, nil)
     elseif CLIENT then
         return
     end
 end
 
+net.Receive('PointShootFinish', function(len, ply)
+    pointshoot:FinishEffect(ply)
+end)
+
 -- ============= 鼠标控制 =============
-function pointshoot:GetOriginWeapon(ply)
-    if SERVER then
-        local idx = ply:EntIndex()
-        local class = self.OriginWeaponClass[idx] or ''
-        local wp = ply:GetWeapon(class)
-
-        if IsValid(wp) then
-            return wp, class
-        else
-            return nil
-        end
-    elseif CLIENT then
-        local class = self.OriginWeaponClass or ''
-        local wp = ply:GetWeapon(class)
-
-        if IsValid(wp) then
-            return wp, class
-        else
-            return nil
-        end
-    end
-end
-
-
 if CLIENT then
     local target = nil
     local duration = 0
@@ -222,7 +153,7 @@ if CLIENT then
             return
         end
 
-        local targetDir = (pos - EyePos()):GetNormal()
+        local targetDir = (pos - LocalPlayer():EyePos()):GetNormal()
         local origin = cmd:GetViewAngles()
         local rate = math.Clamp(timer / duration, 0, 1) 
         rate = origin:Forward():Dot(targetDir) > 0.9995 and 1 or rate
@@ -242,25 +173,18 @@ if CLIENT then
     end
 
     function pointshoot:AutoAim()
-        if not LocalPlayer():Alive() or LocalPlayer():InVehicle() then
+        if not self.Marks or #self.Marks < 1 or 
+            not LocalPlayer():Alive() or LocalPlayer():InVehicle() 
+        then
             hook.Remove('Think', 'pointshoot.autoaim')
             net.Start('PointShootFinish')
             net.SendToServer()
-            self:FinishEffect(LocalPlayer())
+            
             return
         end
 
-        -- 瞄准、射击
-        if not self.Marks or #self.Marks < 1 then
-            hook.Remove('Think', 'pointshoot.autoaim')
-            net.Start('PointShootFinish')
-            net.SendToServer()
-            self:FinishEffect(LocalPlayer())
-            return
-        end
-
-        local wp = pointshoot:GetOriginWeapon(LocalPlayer())
-        if self.aiming or (IsValid(wp) and wp:GetNextPrimaryFire() > RealTime()) then
+        local originwp = pointshoot:GetOriginWeapon(LocalPlayer())
+        if self.aiming or (IsValid(originwp) and self.NextPrimaryFire > RealTime()) then
             return
         end
 
@@ -278,11 +202,6 @@ if CLIENT then
             return
         end
 
-        local wp = self:GetOriginWeapon(LocalPlayer())
-        if pos and dir and IsValid(wp) and istable(wp.ps_wpdata) and wp:Clip1() > 0 then 
-            wp.ps_wpdata.FireHandle(wp, LocalPlayer():EyePos(), pos, dir, LocalPlayer())
-        end
-        
         table.remove(self.Marks, #self.Marks)
         self.shootCount = self.shootCount + 1
         
@@ -294,7 +213,13 @@ if CLIENT then
             net.SendToServer()
 
             self.shootCount = 0
-            if #self.Marks < 1 then wp:SetNextPrimaryFire(0) end
+        end
+
+        if pos then 
+            local originwp = self:GetOriginWeapon(LocalPlayer())
+            if IsValid(originwp) and originwp:Clip1() > 0 then
+                self.Fire(originwp, LocalPlayer():EyePos(), pos, dir, LocalPlayer())
+            end
         end
     end)
 
@@ -307,30 +232,30 @@ elseif SERVER then
         pointshoot:FireSync(ply, count)
     end)
 
-    net.Receive('PointShootFinish', function(len, ply)
-        pointshoot:FinishEffect(ply)
-    end)
 
     function pointshoot:FireSync(ply, count)
         local idx = ply:EntIndex()
         local marks = self.Marks[idx]
-        local wp = self:GetOriginWeapon(ply)
-        if not IsValid(wp) or not wp.ps_wpdata then return end
-
 
         local len = #marks
-        if not istable(marks) or len < 1 then
-            return
-        end
+        if not istable(marks) or len < 1 then return end
         
         local start = ply:EyePos()
-        for i = len, math.max(len - count + 1, 1), -1 do
-            local endpos = pointshoot:GetMarkPos(marks[i])
-            if endpos then 
-                wp.ps_wpdata.FireHandle(wp, start, endpos, nil, ply)
+        local originwp = self:GetOriginWeapon(ply)
+        if not IsValid(originwp) then 
+            for i = len, math.max(len - count + 1, 1), -1 do
+                table.remove(marks, i)
             end
-            
-            table.remove(marks, i)
+        else
+            for i = len, math.max(len - count + 1, 1), -1 do
+                local mark = marks[i]
+                table.remove(marks, i)
+
+                local endpos = pointshoot:GetMarkPos(mark)
+                if endpos then 
+                    self.Fire(originwp, start, endpos, nil, ply)
+                end
+            end
         end
     end
 end
