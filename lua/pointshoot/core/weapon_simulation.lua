@@ -28,6 +28,11 @@ function pointshoot:WeaponParse(wp)
         wp.Primary.Num = wp.Bullet.NumBullets
     end
 
+    wp.Primary.Damage = wp.Primary.Damage or 0
+    wp.Primary.Force = wp.Primary.Force or 0
+    wp.Primary.Num = wp.Primary.Num or 0
+    wp.Primary.Sound = wp.Primary.Sound or ''
+
     return wp.Primary
 end
 
@@ -48,8 +53,11 @@ pointshoot.Fire = function(self, start, endpos, dir, attacker)
         else
             pointshoot.NextPrimaryFire = 0
         end
-        self:EmitSound(self.Primary.Sound)
-    elseif SERVER and not self.Primary.IsMelee then
+
+        if self.Primary.Sound then
+            self:EmitSound(self.Primary.Sound)
+        end
+    elseif SERVER and not self.Primary.IsMelee and not self.Primary.IsGrenade then
         local damage = self.Primary.Damage * pointshoot.CVarsCache.ps_damage_mul
         local damagePenetration = self.Primary.Damage * pointshoot.CVarsCache.ps_damage_penetration_mul
 
@@ -72,55 +80,95 @@ pointshoot.Fire = function(self, start, endpos, dir, attacker)
         bulletInfo.Src = endpos
         self:FireBullets(bulletInfo)
     elseif SERVER and self.Primary.IsMelee then
-        attacker:DropWeapon(self, dir, dir * 5000)
+        attacker:DropWeapon(self)
+
+        local ent = ents.Create('pointshoot_melee')
+        ent:SetPos(start + dir * 100)
+        ent:SetAngles(attacker:EyeAngles())
+        ent:Bind(self)
+        ent:Spawn()
+
+        local phys = ent:GetPhysicsObject()
+        if IsValid(phys) then
+            phys:SetVelocity(dir * 2000)
+        end
+    elseif SERVER and self.Primary.IsGrenade then
+        local grenade = ents.Create('npc_grenade_frag')
+        grenade:SetPos(start + dir * 20)
+        grenade:SetAngles(attacker:EyeAngles())
+        grenade:SetSaveValue('m_hThrower', attacker)
+        grenade:Spawn()
+
+        grenade:Fire('SetTimer', 0.5, 0)
+
+        local phys = grenade:GetPhysicsObject()
+        if IsValid(phys) then
+            phys:SetVelocity(dir * 2000)
+        end
+
+        attacker:SetAmmo(attacker:GetAmmoCount(self:GetPrimaryAmmoType()) - 1, self:GetPrimaryAmmoType())
     end
 end
 
 pointshoot.noscriptedgunsPrimary = {
 	['weapon_pistol'] = {
-		RPM = 600 * 1.5,
+		RPM = 800,
 		Damage = 10,
         Force = 1,
         Sound = 'Weapon_Pistol.Single',
 	},
 	['weapon_357'] = {
-		RPM = 300 * 1.5,
+		RPM = 300,
 		Damage = 60,
         Force = 25,
         Sound = 'Weapon_357.Single',
 	},
 	['weapon_ar2'] = {
-		RPM = 600 * 1.5,
+		RPM = 600,
 		Damage = 20,
         Force = 1,
         Sound = 'Weapon_AR2.Single',
 	},
 	['weapon_crossbow'] = {
-		RPM = 120 * 1.5,
+		RPM = 180,
 		Damage = 150,
         Force = 50,
         Sound = 'Weapon_Crossbow.Single',
 	},
 	['weapon_shotgun'] = {
-		RPM = 180 * 1.5,
+		RPM = 280,
 		Damage = 45,
         Force = 1000,
         Sound = 'Weapon_Shotgun.Single',
         Num = 8,
 	},
 	['weapon_smg1'] = {
-		RPM = 1000 * 1.5,
+		RPM = 1000,
 		Damage = 6,
         Force = 1,
         Sound = 'Weapon_SMG1.Single',
 	},
     ['weapon_crowbar'] = {
-        RPM = 180 * 1.5,
+        RPM = 999,
         Damage = 0,
-        Force = 10000,
+        Force = 2000,
         Sound = 'Weapon_Crowbar.Single',
         IsMelee = true,
-    }
+    },
+    ['weapon_stunstick'] = {
+        RPM = 999,
+        Damage = 0,
+        Force = 2000,
+        Sound = 'Weapon_Stunstick.Single',
+        IsMelee = true,
+    },
+
+    ['weapon_frag'] = {
+        RPM = 300,
+        Damage = 0,
+        Force = 500,
+        IsGrenade = true,
+    },
 }
 
 
@@ -246,6 +294,8 @@ elseif SERVER then
         local start = ply:EyePos()
         local wp = ply:GetActiveWeapon()
         local wpdata = self:WeaponParse(wp)
+        print(wp:GetClass())
+        PrintTable(wpdata)
         if not wpdata then 
             for i = len, math.max(len - count + 1, 1), -1 do
                 table.remove(marks, i)

@@ -35,7 +35,7 @@ function SWEP:StartEffect(ply)
 		
 		for i = #sixthsense.entqueue, 1, -1 do
 			local ent = sixthsense.entqueue[i]
-			if not IsValid(ent) or ent:GetMaxHealth() <= 2 then
+			if not ent.remove and (not IsValid(ent) or ent:GetMaxHealth() <= 2) then
 				table.remove(sixthsense.entqueue, i)
 				continue
 			end

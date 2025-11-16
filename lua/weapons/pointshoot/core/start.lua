@@ -4,7 +4,17 @@ function SWEP:SetStart(wpclass)
         self:CallOnClient('SetStart', wpclass) 
     elseif CLIENT then
         local originwp = LocalPlayer():GetWeapon(wpclass)
-        self.Clip = math.max(IsValid(originwp) and originwp:Clip1() or 1, 1) 
+        local wpdata = pointshoot:WeaponParse(originwp)
+        if not wpdata then return end
+        print('asd', wpdata.IsGrenade)
+        if wpdata.IsGrenade then 
+            print(self:GetPrimaryAmmoType(), originwp:GetPrimaryAmmoType())
+            self.Clip = LocalPlayer():GetAmmoCount(originwp:GetPrimaryAmmoType())
+        elseif wpdata.IsMelee then
+            self.Clip = 1
+        else
+            self.Clip = originwp:Clip1() or 0
+        end
     end
 end
 

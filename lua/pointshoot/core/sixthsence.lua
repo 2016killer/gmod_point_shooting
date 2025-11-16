@@ -62,14 +62,33 @@ function sixthsense:Start(ply, targerRange, duration, durationAlpha, limitent, c
 	self.durationAlpha = ClampAbs(durationAlpha or 2, 0.1, 10)
 
 	self.entqueue = {}
+
+	local pos = ply:GetPos()
 	local entities = ents.FindInSphere(
-		ply:GetPos(), 
+		pos,
 		0.25 * (self.targerRange / self.duration) * self.durationAlpha + self.targerRange
 	)
+
+	table.sort(entities, function(a, b)
+		return (a:GetPos() - pos):LengthSqr() < (b:GetPos() - pos):LengthSqr()
+	end)
 
 	for i, ent in ipairs(entities) do
 		if #self.entqueue >= self.limitent then
 			break
+		end
+
+		if ent:GetClass() == 'npc_grenade_frag' then
+			local grenade = ClientsideModel(ent:GetModel())
+			grenade:SetPos(ent:GetPos())
+			grenade:SetAngles(ent:GetAngles())
+			grenade:SetParent(ent)
+			grenade.remove = true
+			table.insert(self.entqueue, grenade)
+
+			ent:CallOnRemove('sixthsense_grenade', function() if IsValid(grenade) then grenade:Remove() end end)
+	
+			continue
 		end
 
 		if not self:Filter(ent) then

@@ -94,16 +94,16 @@ function SWEP:Holster()
     elseif SERVER and (not self.Marks or #self.Marks < 1) then
         pointshoot:TimeScaleFadeIn(1, nil)
     elseif SERVER then
-        pointshoot.Marks[owner:EntIndex()] = self.Marks
+        pointshoot.Marks[owner:EntIndex()] = table.Reverse(self.Marks)
         self:ExecuteEffect()
         self:CallOnClient('Holster')
-    elseif CLIENT and #self.Marks < 1 then
+    elseif CLIENT and (not self.Marks or #self.Marks < 1) then
         pointshoot:DisableAim()
     elseif CLIENT then
-        pointshoot.Marks = self.Marks
+        pointshoot.Marks = table.Reverse(self.Marks)
         pointshoot:EnableAim()
         self:ExecuteEffect()
-        RunConsoleCommand('pointshoot_remove')
+        // RunConsoleCommand('pointshoot_remove')
     end
 
     return true
