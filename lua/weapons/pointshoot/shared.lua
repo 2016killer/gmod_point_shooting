@@ -79,6 +79,8 @@ function SWEP:Deploy()
                 self:Think()
             end)
         end
+
+        pointshoot:DisableAim()
     end
     self:StartEffect()
 
@@ -86,55 +88,24 @@ function SWEP:Deploy()
 end
 
 function SWEP:Holster()
-
-    if SERVER then
-        local originwp, _ = self:GetOriginWeapon(ply)
-        if IsValid(originwp) then 
-            ply:SelectWeapon(originwp)
-        end
-
-        if not IsValid(originwp) or not self.Marks[ply:EntIndex()] or #self.Marks[ply:EntIndex()] < 1 then
-            self:TimeScaleFadeIn(1, nil)
-            return 
-        end
-
-        net.Start('PointShootExecute')
-        net.Send(ply)
-    elseif CLIENT then
-        self.aiming = false
-        self.shootCount = 0
-        self.fireSyncTime = RealTime()
-
-        local originwp = self:GetOriginWeapon(LocalPlayer())
-        if not IsValid(originwp) or #self.Marks < 0 then 
-            hook.Remove('Think', 'pointshoot.autoaim')
-            return 
-        end
-
-        self.NextPrimaryFire = 0
-
-        hook.Add('Think', 'pointshoot.autoaim', function()
-            self:AutoAim()
-        end)
-    end
-    self:ExecuteEffect(ply)
-    // PrintTable(self.Marks)
-
-
-    if SERVER then 
-        local owner = self:GetOwner()
-        if not IsValid(owner) or not owner:IsPlayer() then return end
-        self.Marks = self.Marks or {}
-        table.Add(self.Marks, {...})
-
+    local owner = self:GetOwner()
+    if SERVER and (not IsValid(owner) or not owner:IsPlayer()) then
+        self:TimeScaleFadeIn(1, nil)
+        return 
+    elseif SERVER and (not self.Marks or #self.Marks < 1) then
+        self:TimeScaleFadeIn(1, nil)
+        return 
+    elseif SERVER then
         pointshoot.Marks[owner:EntIndex()] = self.Marks
-
-        pointshoot:Execute(owner)
+        self:CallOnClient('Holster')
+        self:ExecuteEffect()
+    elseif CLIENT and #self.Marks < 0 then
+        pointshoot:DisableAim()
     elseif CLIENT then
         pointshoot.Marks = self.Marks
+        pointshoot:EnableAim()
+        self:ExecuteEffect()
     end
-
-
 
     return true
 end
@@ -157,7 +128,7 @@ function SWEP:Think()
     local rightKeyDown = game.SinglePlayer() and owner:KeyDown(IN_ATTACK2) or input.IsMouseDown(MOUSE_RIGHT)
     if rightKeyDown or self:PowerThink() then
         self.LockThink = true
-        self:CallDoubleEnd('CTSExecuteRequest', self:GetLeftMasks())
+        self:CallDoubleEnd('CTSExecuteRequest')
         self:ClearPowerCost()
         return
     end
@@ -167,7 +138,7 @@ function SWEP:MouseLeftPress()
     if not self.Clip or self.Clip <= 0 then 
         return
     end
-    self:CallDoubleEnd('CTSAddMarks', pointshoot:TracePenetration())
+    self:CallDoubleEnd('CTSAddMarks', pointshoot:PackMark(pointshoot:TracePenetration()))
     self:MarkEffect()
     self.Clip = self.Clip - 1
 end

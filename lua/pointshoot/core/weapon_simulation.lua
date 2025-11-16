@@ -164,19 +164,19 @@ if CLIENT then
 
     function pointshoot:AutoAim()
         if not self.Marks or #self.Marks < 1 or 
-            not LocalPlayer():Alive() or LocalPlayer():InVehicle() 
+           not IsValid(LocalPlayer():GetActiveWeapon()) or 
+           not LocalPlayer():Alive() or LocalPlayer():InVehicle() 
         then
             self:DisableAim()
             self:CallDoubleEnd('CTSFinish', LocalPlayer())
             return
         end
 
-        local originwp = pointshoot:GetOriginWeapon(LocalPlayer())
-        if self.aiming or (IsValid(originwp) and self.NextPrimaryFire > RealTime()) then
+        if self.aiming or self.NextPrimaryFire > RealTime() then
             return
         end
 
-        self:Aim(self.Marks[#self.Marks], pointshoot.CVarsCache.ps_aim_cost)
+        self:Aim(self.Marks[#self.Marks], self.CVarsCache.ps_aim_cost)
         self.aiming = true
 
         return true
@@ -202,15 +202,20 @@ if CLIENT then
             self.shootCount = 0
         end
 
-        if pos then 
-            local originwp = self:GetOriginWeapon(LocalPlayer())
-            if IsValid(originwp) and originwp:Clip1() > 0 then
-                self.Fire(originwp, LocalPlayer():EyePos(), pos, dir, LocalPlayer())
-            end
+        local wp = LocalPlayer():GetActiveWeapon()
+        if not pos or not IsValid(wp) or wp:Clip1() < 1 then 
+            return
         end
+
+        self.Fire(wp, LocalPlayer():EyePos(), pos, dir, LocalPlayer())
     end
 
     function pointshoot:EnableAim()
+        self.aiming = false
+        self.shootCount = 0
+        self.fireSyncTime = RealTime()
+        self.NextPrimaryFire = 0
+
         hook.Add('InputMouseApply', 'pointshoot.autoaim', function(cmd, x, y, ang) self:InputMouseApply(cmd, x, y, ang) end)
         hook.Add('Think', 'pointshoot.autoaim', function() self:AutoAim() end)
         hook.Add('PointShootAimFinish', 'pointshoot.autoaim', function(pos, dir) self:AimFinish(pos, dir) end)
@@ -238,8 +243,9 @@ elseif SERVER then
         if not istable(marks) or len < 1 then return end
         
         local start = ply:EyePos()
-        local originwp = self:GetOriginWeapon(ply)
-        if not IsValid(originwp) then 
+        local wp = ply:GetActiveWeapon()
+        local wpdata = self:WeaponParse(wp)
+        if not wpdata then 
             for i = len, math.max(len - count + 1, 1), -1 do
                 table.remove(marks, i)
             end
@@ -250,7 +256,7 @@ elseif SERVER then
 
                 local endpos = pointshoot:GetMarkPos(mark)
                 if endpos then 
-                    self.Fire(originwp, start, endpos, nil, ply)
+                    self.Fire(wp, start, endpos, nil, ply)
                 end
             end
         end

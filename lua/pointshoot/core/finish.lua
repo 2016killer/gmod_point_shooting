@@ -1,4 +1,4 @@
-pointshoot:RegisterServerToClient('CTSFinish')
+pointshoot:RegisterClientToServer('CTSFinish')
 
 
 function pointshoot:CTSFinish(ply)

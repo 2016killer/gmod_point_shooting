@@ -13,7 +13,7 @@ function pointshoot:RegisterServerToClient(funcname)
 	elseif CLIENT then
 		net.Receive(netname, function()
 			local data = net.ReadTable(true)
-			self[funcname](wp, LocalPlayer(), unpack(data))
+			self[funcname](self, LocalPlayer(), unpack(data))
 		end)
 	end
 end
@@ -31,7 +31,7 @@ function pointshoot:RegisterClientToServer(funcname)
 
 		net.Receive(netname, function(len, ply)
 			local data = net.ReadTable(true)
-			self[funcname](wp, ply, unpack(data))
+			self[funcname](self, ply, unpack(data))
 		end)
 	end
 
