@@ -19,9 +19,9 @@ pointshoot.CVars = {
 
     {
 		name = 'ps_rpm_mul',
-		default = '1',
+		default = '1.2',
 		widget = 'NumSlider',
-		min = 0,
+		min = 0.1,
 		max = 5,
 		decimals = 1,
 	}, 

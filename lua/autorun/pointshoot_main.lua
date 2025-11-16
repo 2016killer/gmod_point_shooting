@@ -28,6 +28,12 @@ elseif CLIENT then
         print('------Bullet------')
         PrintTable(wp.Bullet)
     end)
+
+    concommand.Add('pointshoot_debug_seq_cl', function(ply)
+        local wp = ply:GetActiveWeapon()
+        print(wp:GetClass(), wp:GetSequence(), ply:GetViewModel():GetSequence())
+    end)
+
 end
 
 

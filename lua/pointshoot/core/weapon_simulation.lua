@@ -32,22 +32,30 @@ function pointshoot:WeaponParse(wp)
     wp.Primary.Force = wp.Primary.Force or 0
     wp.Primary.Num = wp.Primary.Num or 0
     wp.Primary.Sound = wp.Primary.Sound or ''
-
+    wp.Primary.ActPrimary = wp.Primary.ActPrimary or ACT_VM_PRIMARYATTACK
+    wp.Primary.ActDeploy = wp.Primary.ActDeploy or ACT_VM_DEPLOY
+        
     return wp.Primary
 end
+
+pointshoot.SetAmmo = function(self, ply)
+
+end
+
+pointshoot.GetAmmo = function(self, ply)
+    if not self.Primary.IsMelee and not self.Primary.IsGrenade then
+        return self:Clip1()
+    elseif self.Primary.IsGrenade then
+        return ply:GetAmmoCount(self:GetPrimaryAmmoType() or 10)
+    else
+        return 1
+    end
+end
+
 
 pointshoot.Fire = function(self, start, endpos, dir, attacker)
     dir = dir or (endpos - start):GetNormal()
     if CLIENT then
-        local vm = attacker:GetViewModel()
-        if not IsValid(vm) then return end
-        local seq = vm:SelectWeightedSequence(ACT_VM_PRIMARYATTACK)
-        
-        if (seq == -1) then return end
-        
-        vm:SendViewModelMatchingSequence(seq)
-        vm:SetPlaybackRate(1)
-
         if pointshoot.CVarsCache.ps_rpm_mode then
             pointshoot.NextPrimaryFire = RealTime() + 60 / pointshoot.CVarsCache.ps_rpm_mul / self.Primary.RPM
         else
@@ -57,6 +65,16 @@ pointshoot.Fire = function(self, start, endpos, dir, attacker)
         if self.Primary.Sound then
             self:EmitSound(self.Primary.Sound)
         end
+
+        local vm = attacker:GetViewModel()
+        if not IsValid(vm) then return end
+        local seq = vm:SelectWeightedSequence(self.Primary.ActPrimary)
+        
+        if (seq == -1) then return end
+        
+        vm:SendViewModelMatchingSequence(seq)
+        vm:SetPlaybackRate(1)
+
     elseif SERVER and not self.Primary.IsMelee and not self.Primary.IsGrenade then
         local damage = self.Primary.Damage * pointshoot.CVarsCache.ps_damage_mul
         local damagePenetration = self.Primary.Damage * pointshoot.CVarsCache.ps_damage_penetration_mul
@@ -104,9 +122,153 @@ pointshoot.Fire = function(self, start, endpos, dir, attacker)
         local phys = grenade:GetPhysicsObject()
         if IsValid(phys) then
             phys:SetVelocity(dir * 2000)
+        end     
+    end
+end
+
+
+-- ============= 鼠标控制 =============
+if CLIENT then
+    local target = nil
+    local duration = 0
+    local timer = 0
+    function pointshoot:InputMouseApply(cmd, x, y, ang)
+        if not target then 
+            return 
         end
 
-        attacker:SetAmmo(attacker:GetAmmoCount(self:GetPrimaryAmmoType()) - 1, self:GetPrimaryAmmoType())
+        timer = timer + RealFrameTime()
+
+        local pos = pointshoot:GetMarkPos(target)
+        if not pos then
+            target = nil
+            hook.Run('PointShootAimFinish', nil, nil)
+            return
+        end
+
+        local targetDir = (pos - LocalPlayer():EyePos()):GetNormal()
+        local origin = cmd:GetViewAngles()
+        local rate = math.Clamp(timer / duration, 0, 1) 
+        rate = origin:Forward():Dot(targetDir) > 0.9995 and 1 or rate
+        
+        cmd:SetViewAngles(LerpAngle(rate, origin, targetDir:Angle()))
+
+        if rate == 1 then
+            hook.Run('PointShootAimFinish', pos, targetDir)
+            target, duration, timer = nil, 0, 0
+        end
+    end
+
+    function pointshoot:Aim(mark, dura)
+        duration = math.max(dura, 0.01)
+        timer = 0
+        target = mark
+    end
+
+    function pointshoot:AutoAim()
+        if not self.Marks or #self.Marks < 1 or 
+           not IsValid(LocalPlayer():GetActiveWeapon()) or 
+           not LocalPlayer():Alive() or LocalPlayer():InVehicle() 
+        then
+            self:DisableAim()
+            self:CallDoubleEnd('CTSFinish', LocalPlayer())
+            return
+        end
+
+        local mark = self.Marks[#self.Marks]
+        if self.aiming == mark then
+            return
+        end
+
+        self.aiming = mark
+        self:Aim(mark, self.CVarsCache.ps_aim_cost)
+        
+
+        return true
+    end
+
+    function pointshoot:AimFinish(pos, dir)
+        self.aiming = false
+        if self.NextPrimaryFire > RealTime() then
+            return
+        end
+
+        
+        table.remove(self.Marks, #self.Marks)
+        self.shootCount = self.shootCount + 1
+        
+        if #self.Marks < 1 or (RealTime() - self.fireSyncTime >= 0.5 and self.shootCount > 0) then
+            self.fireSyncTime = RealTime()
+        
+            net.Start('PointShootFireSync')
+                net.WriteInt(self.shootCount, 32)
+            net.SendToServer()
+
+            self.shootCount = 0
+        end
+
+        local wp = LocalPlayer():GetActiveWeapon()
+        local wpdata = self:WeaponParse(wp)
+        
+        if not pos or not wpdata or self.GetAmmo(wp, LocalPlayer()) < 1 then 
+            return
+        end
+                
+        self.Fire(wp, LocalPlayer():EyePos(), pos, dir, LocalPlayer())
+    end
+    
+
+    function pointshoot:EnableAim()
+        self.aiming = false
+        self.shootCount = 0
+        self.fireSyncTime = RealTime()
+        self.NextPrimaryFire = 0
+
+        hook.Add('InputMouseApply', 'pointshoot.autoaim', function(cmd, x, y, ang) self:InputMouseApply(cmd, x, y, ang) end)
+        hook.Add('Think', 'pointshoot.autoaim', function() self:AutoAim() end)
+        hook.Add('PointShootAimFinish', 'pointshoot.autoaim', function(pos, dir) self:AimFinish(pos, dir) end)
+    end
+
+    function pointshoot:DisableAim()
+        hook.Remove('InputMouseApply', 'pointshoot.autoaim')
+        hook.Remove('Think', 'pointshoot.autoaim')
+        hook.Remove('PointShootAimFinish', 'pointshoot.autoaim')
+    end
+elseif SERVER then
+    util.AddNetworkString('PointShootFireSync')
+
+    net.Receive('PointShootFireSync', function(len, ply)
+        local count = net.ReadInt(32)
+        pointshoot:FireSync(ply, count)
+    end)
+
+
+    function pointshoot:FireSync(ply, count)
+        local idx = ply:EntIndex()
+        local marks = self.Marks[idx]
+
+        local len = #marks
+        if not istable(marks) or len < 1 then return end
+        
+        local start = ply:EyePos()
+        local wp = ply:GetActiveWeapon()
+        local wpdata = self:WeaponParse(wp)
+
+        if not wpdata then 
+            for i = len, math.max(len - count + 1, 1), -1 do
+                table.remove(marks, i)
+            end
+        else
+            for i = len, math.max(len - count + 1, 1), -1 do
+                local mark = marks[i]
+                table.remove(marks, i)
+
+                local endpos = pointshoot:GetMarkPos(mark)
+                if endpos then 
+                    self.Fire(wp, start, endpos, nil, ply)
+                end
+            end
+        end
     end
 end
 
@@ -115,7 +277,7 @@ pointshoot.noscriptedgunsPrimary = {
 		RPM = 800,
 		Damage = 10,
         Force = 1,
-        Sound = 'Weapon_Pistol.Single',
+        Sound = 'Weapon_Pistol.Single'
 	},
 	['weapon_357'] = {
 		RPM = 300,
@@ -168,148 +330,7 @@ pointshoot.noscriptedgunsPrimary = {
         Damage = 0,
         Force = 500,
         IsGrenade = true,
+        ActPrimary = ACT_VM_THROW,
+        ActDeploy = ACT_VM_DEPLOY,
     },
 }
-
-
--- ============= 鼠标控制 =============
-if CLIENT then
-    local target = nil
-    local duration = 0
-    local timer = 0
-    function pointshoot:InputMouseApply(cmd, x, y, ang)
-        if not target then 
-            return 
-        end
-
-        timer = timer + RealFrameTime()
-
-        local pos = pointshoot:GetMarkPos(target)
-        if not pos then
-            target = nil
-            hook.Run('PointShootAimFinish', nil, nil)
-            return
-        end
-
-        local targetDir = (pos - LocalPlayer():EyePos()):GetNormal()
-        local origin = cmd:GetViewAngles()
-        local rate = math.Clamp(timer / duration, 0, 1) 
-        rate = origin:Forward():Dot(targetDir) > 0.9995 and 1 or rate
-        
-        cmd:SetViewAngles(LerpAngle(rate, origin, targetDir:Angle()))
-
-        if rate == 1 then
-            hook.Run('PointShootAimFinish', pos, targetDir)
-            target, duration, timer = nil, 0, 0
-        end
-    end
-
-    function pointshoot:Aim(mark, dura)
-        duration = math.max(dura, 0.01)
-        timer = 0
-        target = mark
-    end
-
-    function pointshoot:AutoAim()
-        if not self.Marks or #self.Marks < 1 or 
-           not IsValid(LocalPlayer():GetActiveWeapon()) or 
-           not LocalPlayer():Alive() or LocalPlayer():InVehicle() 
-        then
-            self:DisableAim()
-            self:CallDoubleEnd('CTSFinish', LocalPlayer())
-            return
-        end
-
-        if self.aiming or self.NextPrimaryFire > RealTime() then
-            return
-        end
-
-        self:Aim(self.Marks[#self.Marks], self.CVarsCache.ps_aim_cost)
-        self.aiming = true
-
-        return true
-    end
-
-    function pointshoot:AimFinish(pos, dir)
-        self.aiming = false
-
-        if not LocalPlayer():Alive() or LocalPlayer():InVehicle() then
-            return
-        end
-
-        table.remove(self.Marks, #self.Marks)
-        self.shootCount = self.shootCount + 1
-        
-        if #self.Marks < 1 or (RealTime() - self.fireSyncTime >= 0.5 and self.shootCount > 0) then
-            self.fireSyncTime = RealTime()
-        
-            net.Start('PointShootFireSync')
-                net.WriteInt(self.shootCount, 32)
-            net.SendToServer()
-
-            self.shootCount = 0
-        end
-
-        local wp = LocalPlayer():GetActiveWeapon()
-        local wpdata = self:WeaponParse(wp)
-        if not pos or not wpdata or wp:Clip1() < 1 then 
-            return
-        end
-
-        self.Fire(wp, LocalPlayer():EyePos(), pos, dir, LocalPlayer())
-    end
-
-    function pointshoot:EnableAim()
-        self.aiming = false
-        self.shootCount = 0
-        self.fireSyncTime = RealTime()
-        self.NextPrimaryFire = 0
-
-        hook.Add('InputMouseApply', 'pointshoot.autoaim', function(cmd, x, y, ang) self:InputMouseApply(cmd, x, y, ang) end)
-        hook.Add('Think', 'pointshoot.autoaim', function() self:AutoAim() end)
-        hook.Add('PointShootAimFinish', 'pointshoot.autoaim', function(pos, dir) self:AimFinish(pos, dir) end)
-    end
-
-    function pointshoot:DisableAim()
-        hook.Remove('InputMouseApply', 'pointshoot.autoaim')
-        hook.Remove('Think', 'pointshoot.autoaim')
-        hook.Remove('PointShootAimFinish', 'pointshoot.autoaim')
-    end
-elseif SERVER then
-    util.AddNetworkString('PointShootFireSync')
-
-    net.Receive('PointShootFireSync', function(len, ply)
-        local count = net.ReadInt(32)
-        pointshoot:FireSync(ply, count)
-    end)
-
-
-    function pointshoot:FireSync(ply, count)
-        local idx = ply:EntIndex()
-        local marks = self.Marks[idx]
-
-        local len = #marks
-        if not istable(marks) or len < 1 then return end
-        
-        local start = ply:EyePos()
-        local wp = ply:GetActiveWeapon()
-        local wpdata = self:WeaponParse(wp)
-        print(wp:GetClass())
-        PrintTable(wpdata)
-        if not wpdata then 
-            for i = len, math.max(len - count + 1, 1), -1 do
-                table.remove(marks, i)
-            end
-        else
-            for i = len, math.max(len - count + 1, 1), -1 do
-                local mark = marks[i]
-                table.remove(marks, i)
-
-                local endpos = pointshoot:GetMarkPos(mark)
-                if endpos then 
-                    self.Fire(wp, start, endpos, nil, ply)
-                end
-            end
-        end
-    end
-end

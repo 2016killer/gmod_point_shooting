@@ -1,7 +1,7 @@
 SWEP.Slot = 4
 SWEP.SlotPos = 99
-SWEP.PrintName = 'PointShoot'
-SWEP.Category = 'Legend'
+SWEP.PrintName = '#pointsh.category'
+SWEP.Category = '#legend'
 SWEP.Author = 'Zack'
 
 SWEP.ViewModel = 'models/weapons/c_arms_citizen.mdl'

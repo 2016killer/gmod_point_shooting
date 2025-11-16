@@ -6,15 +6,7 @@ function SWEP:SetStart(wpclass)
         local originwp = LocalPlayer():GetWeapon(wpclass)
         local wpdata = pointshoot:WeaponParse(originwp)
         if not wpdata then return end
-        print('asd', wpdata.IsGrenade)
-        if wpdata.IsGrenade then 
-            print(self:GetPrimaryAmmoType(), originwp:GetPrimaryAmmoType())
-            self.Clip = LocalPlayer():GetAmmoCount(originwp:GetPrimaryAmmoType())
-        elseif wpdata.IsMelee then
-            self.Clip = 1
-        else
-            self.Clip = originwp:Clip1() or 0
-        end
+        self.Clip = pointshoot.GetAmmo(originwp, LocalPlayer())
     end
 end
 
