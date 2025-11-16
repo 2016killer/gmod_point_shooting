@@ -90,21 +90,20 @@ end
 function SWEP:Holster()
     local owner = self:GetOwner()
     if SERVER and (not IsValid(owner) or not owner:IsPlayer()) then
-        self:TimeScaleFadeIn(1, nil)
-        return 
+        pointshoot:TimeScaleFadeIn(1, nil)
     elseif SERVER and (not self.Marks or #self.Marks < 1) then
-        self:TimeScaleFadeIn(1, nil)
-        return 
+        pointshoot:TimeScaleFadeIn(1, nil)
     elseif SERVER then
         pointshoot.Marks[owner:EntIndex()] = self.Marks
-        self:CallOnClient('Holster')
         self:ExecuteEffect()
-    elseif CLIENT and #self.Marks < 0 then
+        self:CallOnClient('Holster')
+    elseif CLIENT and #self.Marks < 1 then
         pointshoot:DisableAim()
     elseif CLIENT then
         pointshoot.Marks = self.Marks
         pointshoot:EnableAim()
         self:ExecuteEffect()
+        RunConsoleCommand('pointshoot_remove')
     end
 
     return true

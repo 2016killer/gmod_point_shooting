@@ -72,7 +72,7 @@ pointshoot.Fire = function(self, start, endpos, dir, attacker)
         bulletInfo.Src = endpos
         self:FireBullets(bulletInfo)
     elseif SERVER and self.Primary.IsMelee then
-        ply:DropWeapon(self, dir, dir * 5000)
+        attacker:DropWeapon(self, dir, dir * 5000)
     end
 end
 
@@ -203,7 +203,8 @@ if CLIENT then
         end
 
         local wp = LocalPlayer():GetActiveWeapon()
-        if not pos or not IsValid(wp) or wp:Clip1() < 1 then 
+        local wpdata = self:WeaponParse(wp)
+        if not pos or not wpdata or wp:Clip1() < 1 then 
             return
         end
 

@@ -4,7 +4,7 @@ function SWEP:SetStart(wpclass)
         self:CallOnClient('SetStart', wpclass) 
     elseif CLIENT then
         local originwp = LocalPlayer():GetWeapon(wpclass)
-        self.Clip = IsValid(originwp) and originwp:Clip1() or 0
+        self.Clip = math.max(IsValid(originwp) and originwp:Clip1() or 1, 1) 
     end
 end
 
@@ -37,4 +37,10 @@ if SERVER then
         ply:PickupWeapon(pswp)
         ply:SelectWeapon(pswp)
     end)
+
+    concommand.Add('pointshoot_remove', function(ply, cmd, args)
+        local wp = ply:GetWeapon('pointshoot')
+        if IsValid(wp) then wp:Remove() end
+    end)
+
 end
