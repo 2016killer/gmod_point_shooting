@@ -1,3 +1,4 @@
+local pointshoot = pointshoot
 local zerovec = Vector(0, 0, 0)
 
 local function MWBGunGetRPM(self)

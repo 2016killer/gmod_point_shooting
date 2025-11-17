@@ -1,3 +1,5 @@
+local pointshoot = pointshoot
+
 function SWEP:MarkEffect(tr)
 	if SERVER then
 		return

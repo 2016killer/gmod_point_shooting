@@ -34,7 +34,7 @@ function SWEP:DrawPower()
 
     surface.SetFont('DermaLarge')
 	surface.SetTextColor(255, 255, 255)
-	surface.SetTextPos(x + 0.5 * w - 20, y - 50) 
+	surface.SetTextPos(scrW * 0.5, y) 
 	surface.DrawText(self.Clip)
 
 	surface.SetDrawColor(170, 170, 170, alpha * 255)

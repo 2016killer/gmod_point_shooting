@@ -48,6 +48,8 @@ local function LoadLuaFiles(dirname)
 	end
 end
 
+pointshoot = pointshoot or {}
+local pointshoot = pointshoot
 
 AddCSLuaFile()
 AddCSLuaFile('common.lua')

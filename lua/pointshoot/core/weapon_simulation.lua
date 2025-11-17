@@ -73,7 +73,7 @@ if CLIENT then
 
         Timer = Timer + RealFrameTime()
 
-        local pos = pointshoot:GetMarkPos(target)
+        local pos = self:GetMarkPos(target)
         if not pos then
             target = nil
             hook.Run('PointShootAimFinish', nil, nil)
@@ -173,12 +173,12 @@ if CLIENT then
             return
         end
   
-        if pointshoot.CVarsCache.ps_rpm_mode then
-            pointshoot.NextPrimaryFire = RealTime() + 60 / 
-            pointshoot.CVarsCache.ps_rpm_mul / 
+        if self.CVarsCache.ps_rpm_mode then
+            self.NextPrimaryFire = RealTime() + 60 / 
+            self.CVarsCache.ps_rpm_mul / 
             (wp:ps_wppGetRPM() or 99999)
         else
-            pointshoot.NextPrimaryFire = 0
+            self.NextPrimaryFire = 0
         end
 
         wp:ps_wppPlayAttackAnim(LocalPlayer())
@@ -252,7 +252,7 @@ elseif SERVER then
 
                 if wp:ps_wppGetClip(ply) < 1 then continue end
 
-                local endpos = pointshoot:GetMarkPos(mark)
+                local endpos = self:GetMarkPos(mark)
                 if not endpos then continue end
 
                 local dir = (endpos - start):GetNormal()
@@ -268,11 +268,11 @@ elseif SERVER then
                 bulletInfo.Inflictor = wp
 
                 bulletInfo.Src = start
-                bulletInfo.Damage = damage * pointshoot.CVarsCache.ps_damage_mul
+                bulletInfo.Damage = damage * self.CVarsCache.ps_damage_mul
                 wp:FireBullets(bulletInfo)
 
                 bulletInfo.Src = endpos
-                bulletInfo.Damage = damage * pointshoot.CVarsCache.ps_damage_penetration_mul
+                bulletInfo.Damage = damage * self.CVarsCache.ps_damage_penetration_mul
                 wp:FireBullets(bulletInfo)
 
                 wp:ps_wppDecrClip(ply)
