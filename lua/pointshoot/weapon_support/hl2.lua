@@ -5,13 +5,13 @@ local function GetDeployDuration(self, ply)
     if not IsValid(vm) then 
         return 0 
     end
-
-    local seq = vm:SelectWeightedSequence(ACT_VM_PRIMARYATTACK)
+    
+    local seq = vm:SelectWeightedSequence(ACT_VM_DRAW)
     if (seq == -1) then 
         return 0 
     end
-
-    return math.max(vm:SequenceDuration(seq), 0)
+    
+    return math.max(vm:SequenceDuration(seq) * 0.2, 0)
 end
 
 local function GunGetRPM(self) 
@@ -249,3 +249,5 @@ GrenadePlayAttackAnim = nil
 GrenadeFireOverride = nil
 GrenadeDecrClip = nil
 GrenadeGetClip = nil
+
+GetDeployDuration = nil

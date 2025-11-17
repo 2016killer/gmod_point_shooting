@@ -11,33 +11,13 @@ pointshoot.Marks = {}
 
 
 if SERVER then
-    concommand.Add('pointshoot_debug_wpdata_sv', function(ply)
-        local wp = ply:GetActiveWeapon()
-        print(wp:GetClass())
-        if not istable(wp.Primary) then return end
-        print('------Primary------')
-        PrintTable(wp.Primary)
-        if not istable(wp.Bullet) then return end
-        print('------Bullet------')
-        PrintTable(wp.Bullet)
+    concommand.Add('pointshoot_debug_sv', function(ply)
+        PrintTable(pointshoot)
     end)
 elseif CLIENT then
-    concommand.Add('pointshoot_debug_wpdata_cl', function(ply)
-        local wp = ply:GetActiveWeapon()
-        print(wp:GetClass())
-        if not istable(wp.Primary) then return end
-        print('------Primary------')
-        PrintTable(wp.Primary)
-        if not istable(wp.Bullet) then return end
-        print('------Bullet------')
-        PrintTable(wp.Bullet)
+    concommand.Add('pointshoot_debug_cl', function(ply)
+        PrintTable(pointshoot)
     end)
-
-    concommand.Add('pointshoot_debug_seq_cl', function(ply)
-        local wp = ply:GetActiveWeapon()
-        print(wp:GetClass(), wp:GetSequence(), ply:GetViewModel():GetSequence())
-    end)
-
 end
 
 

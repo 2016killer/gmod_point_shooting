@@ -1,5 +1,24 @@
 local zerovec = Vector(0, 0, 0)
 
+local function TFAGetDeployDuration(self, ply) 
+    local rate = self:GetAnimationRate(ACT_VM_DRAW, nil) or 1
+    if rate == 0 then 
+        return 0
+    end
+    
+    local vm = ply:GetViewModel()
+    if not IsValid(vm) then 
+        return 0 
+    end
+
+    local seq = vm:SelectWeightedSequence(ACT_VM_DRAW)
+    if (seq == -1) then 
+        return 0 
+    end
+
+    return math.Clamp(vm:SequenceDuration(seq) / rate, 0, 5)
+end
+
 local function TFAMeleeGetClip(self, ply)
     return 1
 end
@@ -23,6 +42,7 @@ end
 
 
 pointshoot:RegisterWhiteListBase('tfa_melee_base', {
+    GetDeployDuration = TFAGetDeployDuration,
     GetRPM = pointshoot.emptyfunc,
     PlayAttackAnim = pointshoot.emptyfunc,
     GetBulletInfo = TFAMeleeGetBulletInfo,
@@ -31,6 +51,7 @@ pointshoot:RegisterWhiteListBase('tfa_melee_base', {
 })
 
 pointshoot:RegisterWhiteListBase('tfa_bash_base', {
+    GetDeployDuration = TFAGetDeployDuration,
     GetRPM = pointshoot.emptyfunc,
     PlayAttackAnim = pointshoot.emptyfunc,
     GetBulletInfo = TFAMeleeGetBulletInfo,
@@ -39,6 +60,7 @@ pointshoot:RegisterWhiteListBase('tfa_bash_base', {
 })
 
 pointshoot:RegisterWhiteListBase('tfa_sword_advanced_base', {
+    GetDeployDuration = TFAGetDeployDuration,
     GetRPM = pointshoot.emptyfunc,
     PlayAttackAnim = pointshoot.emptyfunc,
     GetBulletInfo = TFAMeleeGetBulletInfo,
@@ -91,6 +113,7 @@ local function TFAGunGetBulletInfo(self, ply, start, endpos, dir)
 end
 
 pointshoot:RegisterWhiteListBase('tfa_gun_base', {
+    GetDeployDuration = TFAGetDeployDuration,
     GetRPM = TFAGunGetRPM,
     PlayAttackAnim = TFAGunPlayAttackAnim,
     GetBulletInfo = TFAGunGetBulletInfo,
@@ -103,3 +126,5 @@ TFAGunPlayAttackAnim = nil
 TFAGunGetBulletInfo = nil
 TFAGunDecrClip = nil
 TFAGunGetClip = nil
+
+TFAGetDeployDuration = nil

@@ -29,7 +29,7 @@ function SWEP:STCStart(wpclass, power, powercost)
         end
 
         pointshoot:DisableAim()
-
+        pointshoot:ThinkTimerRemove('pointshoot_thinktimer_execute')
 
         local originwp = LocalPlayer():GetWeapon(wpclass)
         local parseSucc = pointshoot:WeaponParse(originwp)
@@ -60,7 +60,7 @@ if SERVER then
             newwp:Remove()
             return true
         end
-        
+
         newwp:SetStartData(oldwp:GetClass(), 1, pointshoot.CVarsCache.ps_power_cost)
     end)
 
