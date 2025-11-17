@@ -3,239 +3,46 @@
 ]]
 
 pointshoot = pointshoot or {}
-pointshoot.zerovec = Vector(0, 0, 0)
 pointshoot.emptyfunc = function() end
-
-
+pointshoot.WhiteList = pointshoot.WhiteList or {}
+pointshoot.WhiteListBase = pointshoot.WhiteListBase or {}
 function pointshoot:WeaponParse(wp)
     if not IsValid(wp) then 
         return false
     end
 
-    -- 原版武器, 查表
-    if not wp.Primary then
-        wp.Primary = self.noscriptedgunsPrimary[wp:GetClass()]
+    if wp.ps_wppIsParsed then 
+        return true
     end
 
-    if not istable(wp.Primary) then
-        return
+    local class = wp:GetClass()
+    local result = self.WhiteList[class]
+
+    if not result then
+        for basename, v in pairs(self.WhiteListBase) do
+            if weapons.IsBasedOn(class, basename) then
+                result = v
+                break
+            end
+        end
     end
-
-    -- MWB 武器
-    if istable(wp.Bullet) then
-        wp.Primary.Damage = istable(wp.Bullet.Damage) and wp.Bullet.Damage[1] or nil
-        wp.Primary.Force = wp.Bullet.PhysicsMultiplier
-        wp.Primary.IsMelee = false
-        wp.Primary.Num = wp.Bullet.NumBullets
-        wp.PlayAttackAnim = wp.PlayAttackAnim or pointshoot.MWBPlayAttackAnim
-    end
-
-    wp.Primary.Damage = wp.Primary.Damage or 0
-    wp.Primary.Force = wp.Primary.Force or 0
-    wp.Primary.Num = wp.Primary.Num or 0
-    wp.Primary.Sound = wp.Primary.Sound or ''
-    wp.Primary.ActPrimary = wp.Primary.ActPrimary or ACT_VM_PRIMARYATTACK
-    wp.Primary.ActDeploy = wp.Primary.ActDeploy or ACT_VM_DEPLOY
-    wp.Primary.Spread = isvector(wp.Primary.Spread) and wp.Primary.Spread or pointshoot.zerovec
-    wp.Primary.Recoil = wp.Primary.Recoil or 1
-    wp.MuzzleFlashCustom = wp.MuzzleFlashCustom or pointshoot.emptyfunc
-    wp.MakeShell = wp.MakeShell or pointshoot.emptyfunc
-    wp.MuzzleSmoke = wp.MuzzleSmoke or pointshoot.emptyfunc
-    wp.PlayAttackAnim = wp.PlayAttackAnim or pointshoot.PlayAttackAnim
-
-    return wp.Primary
-end
-
-pointshoot.MWBPlayAttackAnim = function(self, _)
-    if not self.GetViewModel then
-        return
-    end
-
-    local vm = self:GetViewModel()
-    if not IsValid(vm) or not vm.PlaySequence then return end
     
-    vm:PlaySequence(ACT_VM_PRIMARYATTACK)
-end
+    if result then
+        if result.Modify then result.Modify(wp) end
 
+        wp.ps_wppGetRPM = result.GetRPM
+        wp.ps_wppPlayAttackAnim = result.PlayAttackAnim
+        wp.ps_wppGetBulletInfo = result.GetBulletInfo
+        wp.ps_wppDecrClip = result.DecrClip
+        wp.ps_wppGetClip = result.GetClip
 
-pointshoot.PlayAttackAnim = function(self, ply)
-    local vm = ply:GetViewModel()
-    if not IsValid(vm) then return end
-    local seq = vm:SelectWeightedSequence(ACT_VM_PRIMARYATTACK)
-    
-    if (seq == -1) then return end
-    
-    vm:SendViewModelMatchingSequence(seq)
-    vm:SetPlaybackRate(1)
-end
-
-
-pointshoot.DecrAmmo = function(self, ply)
-    if not self.Primary.IsMelee and not self.Primary.IsGrenade then
-        self:SetClip1(math.max(0, self:Clip1() - 1))
-    elseif self.Primary.IsGrenade then
-        local curAmmo = ply:GetAmmoCount(self:GetPrimaryAmmoType() or 10)
-        ply:SetAmmo(math.max(0, curAmmo - 1), self:GetPrimaryAmmoType() or 10)
-    // else
-    //     return
-    end
-end
-
-pointshoot.GetAmmo = function(self, ply)
-    if not self.Primary.IsMelee and not self.Primary.IsGrenade then
-        return self:Clip1()
-    elseif self.Primary.IsGrenade then
-        return ply:GetAmmoCount(self:GetPrimaryAmmoType() or 10)
+        wp.ps_wppIsParsed = true
+        wp.ps_wppdata = result
+        return true
     else
-        return 1
+        return false
     end
 end
-
-
-pointshoot.Fire = function(self, start, endpos, dir, attacker)
-    dir = dir or (endpos - start):GetNormal()
-    if CLIENT then
-        if pointshoot.CVarsCache.ps_rpm_mode then
-            pointshoot.NextPrimaryFire = RealTime() + 60 / pointshoot.CVarsCache.ps_rpm_mul / self.Primary.RPM
-        else
-            pointshoot.NextPrimaryFire = 0
-        end
-
-        if self.Primary.Sound then
-            self:EmitSound(self.Primary.Sound)
-        end
-
-        self:MuzzleFlashCustom()
-        self:MakeShell()
-        self:MuzzleSmoke()
-        self:PlayAttackAnim(attacker)
-        pointshoot:SetRecoil(-5 * math.abs(self.Primary.Recoil), 0, 0)
-
-    elseif SERVER and not self.Primary.IsMelee and not self.Primary.IsGrenade then
-        local damage = self.Primary.Damage * pointshoot.CVarsCache.ps_damage_mul
-        local damagePenetration = self.Primary.Damage * pointshoot.CVarsCache.ps_damage_penetration_mul
-
-        local bulletInfo = {
-            Spread = self.Primary.Spread,
-            Force = self.Primary.Force,
-            Num = self.Primary.Num,
-            Tracer = 0,
-
-            Attacker = attacker,
-            Inflictor = self,
-
-            Dir = (endpos - start):GetNormal(),
-        }
-
-        bulletInfo.Src = start
-        bulletInfo.Damage = damage
-        self:FireBullets(bulletInfo)
-        bulletInfo.Damage = damagePenetration
-        bulletInfo.Src = endpos
-        self:FireBullets(bulletInfo)
-    elseif SERVER and self.Primary.IsMelee then
-        attacker:DropWeapon(self)
-
-        local ent = ents.Create('pointshoot_melee')
-        ent:SetPos(start + dir * 100)
-        ent:SetAngles(attacker:EyeAngles())
-        ent:Bind(self)
-        ent:Spawn()
-
-        local phys = ent:GetPhysicsObject()
-        if IsValid(phys) then
-            phys:SetVelocity(dir * 2000)
-        end
-    elseif SERVER and self.Primary.IsGrenade then
-        local grenade = ents.Create('npc_grenade_frag')
-        grenade:SetPos(start + dir * 20)
-        grenade:SetAngles(attacker:EyeAngles())
-        grenade:SetSaveValue('m_hThrower', attacker)
-        grenade:Spawn()
-
-        grenade:Fire('SetTimer', 0.5, 0)
-
-        local phys = grenade:GetPhysicsObject()
-        if IsValid(phys) then
-            phys:SetVelocity(dir * 2000)
-        end     
-    end
-end
-
-
-pointshoot.noscriptedgunsPrimary = {
-	['weapon_pistol'] = {
-		RPM = 800,
-		Damage = 10,
-        Force = 1,
-        Sound = 'Weapon_Pistol.Single',
-        Recoil = 0.5,
-	},
-	['weapon_357'] = {
-		RPM = 300,
-		Damage = 60,
-        Force = 25,
-        Sound = 'Weapon_357.Single',
-        Recoil = 2,
-	},
-	['weapon_ar2'] = {
-		RPM = 600,
-		Damage = 20,
-        Force = 1,
-        Sound = 'Weapon_AR2.Single',
-        Recoil = 1,
-	},
-	['weapon_crossbow'] = {
-		RPM = 180,
-		Damage = 150,
-        Force = 50,
-        Sound = 'Weapon_Crossbow.Single',
-        Recoil = 5,
-	},
-	['weapon_shotgun'] = {
-		RPM = 280,
-		Damage = 45,
-        Force = 1000,
-        Sound = 'Weapon_Shotgun.Single',
-        Spread = Vector(0.05, 0.05, 0),
-        Num = 8,
-        Recoil = 3,
-	},
-	['weapon_smg1'] = {
-		RPM = 1000,
-		Damage = 6,
-        Force = 1,
-        Sound = 'Weapon_SMG1.Single',
-        Recoil = 0.5,
-	},
-    ['weapon_crowbar'] = {
-        RPM = 999,
-        Damage = 0,
-        Force = 2000,
-        Sound = 'Weapon_Crowbar.Single',
-        IsMelee = true,
-        Recoil = 0,
-    },
-    ['weapon_stunstick'] = {
-        RPM = 999,
-        Damage = 0,
-        Force = 2000,
-        Sound = 'Weapon_Stunstick.Single',
-        IsMelee = true,
-        Recoil = 0,
-    },
-
-    ['weapon_frag'] = {
-        RPM = 300,
-        Damage = 0,
-        Force = 500,
-        IsGrenade = true,
-        ActPrimary = ACT_VM_THROW,
-        ActDeploy = ACT_VM_DEPLOY,
-        Recoil = 0,
-    },
-}
-
 -- ============= 鼠标控制 =============
 if CLIENT then
     local target = nil
@@ -342,13 +149,21 @@ if CLIENT then
         end
 
         local wp = LocalPlayer():GetActiveWeapon()
-        local wpdata = self:WeaponParse(wp)
+        local parseSucc = self:WeaponParse(wp)
         
-        if not pos or not wpdata or self.GetAmmo(wp, LocalPlayer()) < 1 then 
+        if not pos or not parseSucc or wp:ps_wppGetClip(LocalPlayer()) < 1 then 
             return
         end
-                
-        self.Fire(wp, LocalPlayer():EyePos(), pos, dir, LocalPlayer())
+  
+        if pointshoot.CVarsCache.ps_rpm_mode then
+            pointshoot.NextPrimaryFire = RealTime() + 60 / 
+            pointshoot.CVarsCache.ps_rpm_mul / 
+            (wp:ps_wppGetRPM() or 99999)
+        else
+            pointshoot.NextPrimaryFire = 0
+        end
+
+        wp:ps_wppPlayAttackAnim(LocalPlayer())
     end
     
 
@@ -396,7 +211,6 @@ elseif SERVER then
         pointshoot:FireSync(ply, count)
     end)
 
-
     function pointshoot:FireSync(ply, count)
         local idx = ply:EntIndex()
         local marks = self.Marks[idx]
@@ -406,9 +220,9 @@ elseif SERVER then
         
         local start = ply:EyePos()
         local wp = ply:GetActiveWeapon()
-        local wpdata = self:WeaponParse(wp)
+        local parseSucc = self:WeaponParse(wp)
 
-        if not wpdata then 
+        if not parseSucc then 
             for i = len, math.max(len - count + 1, 1), -1 do
                 table.remove(marks, i)
             end
@@ -417,16 +231,29 @@ elseif SERVER then
                 local mark = marks[i]
                 table.remove(marks, i)
 
-                if self.GetAmmo(wp, ply) < 1 then
-                    continue
-                end
+                if wp:ps_wppGetClip(ply) < 1 then continue end
 
                 local endpos = pointshoot:GetMarkPos(mark)
-                if endpos then 
-                    self.Fire(wp, start, endpos, nil, ply)
-                end
-                
-                self.DecrAmmo(wp, ply)
+                if not endpos then continue end
+
+                local dir = (endpos - start):GetNormal()
+                local bulletInfo = wp:ps_wppGetBulletInfo(ply, start, endpos, dir)
+                if not bulletInfo then continue end
+
+                local damage = (bulletInfo.Damage or 1)
+                bulletInfo.Dir = dir
+                bulletInfo.Attacker = ply
+                bulletInfo.Inflictor = wp
+
+                bulletInfo.Src = start
+                bulletInfo.Damage = damage * pointshoot.CVarsCache.ps_damage_mul
+                wp:FireBullets(bulletInfo)
+
+                bulletInfo.Src = endpos
+                bulletInfo.Damage = damage * pointshoot.CVarsCache.ps_damage_penetration_mul
+                wp:FireBullets(bulletInfo)
+
+                wp:ps_wppDecrClip(ply)
             end
         end
     end

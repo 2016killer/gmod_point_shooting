@@ -30,13 +30,14 @@ function SWEP:STCStart(wpclass, power, powercost)
 
 
         local originwp = LocalPlayer():GetWeapon(wpclass)
-        pointshoot:WeaponParse(originwp)
-
+        local parseSucc = pointshoot:WeaponParse(originwp)
+        if not parseSucc then return end
+        
         self.OriginWeaponClass = wpclass
         self.Power = power
         self.PowerCost = powercost
         self.PowerStartTime = RealTime()
-        self.Clip = pointshoot.GetAmmo(originwp, LocalPlayer())
+        self.Clip = originwp:ps_wppGetClip(LocalPlayer())
     end
     self:StartEffect()
 end
@@ -52,8 +53,8 @@ if SERVER then
             return
         end
 
-        local wpdata = pointshoot:WeaponParse(oldwp)
-        if not wpdata or pointshoot.GetAmmo(oldwp, ply) < 1 then
+        local parseSucc = pointshoot:WeaponParse(oldwp)
+        if not parseSucc or oldwp:ps_wppGetClip(ply) < 1 then
             newwp:Remove()
             return true
         end
