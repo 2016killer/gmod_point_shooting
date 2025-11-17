@@ -54,6 +54,7 @@ if SERVER then
 
         local wpdata = pointshoot:WeaponParse(oldwp)
         if not wpdata or pointshoot.GetAmmo(oldwp, ply) < 1 then
+            newwp:Remove()
             return true
         end
         

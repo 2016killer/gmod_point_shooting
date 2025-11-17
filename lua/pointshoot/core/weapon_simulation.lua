@@ -4,6 +4,8 @@
 
 pointshoot = pointshoot or {}
 pointshoot.zerovec = Vector(0, 0, 0)
+pointshoot.emptyfunc = function() end
+
 
 function pointshoot:WeaponParse(wp)
     if not IsValid(wp) then 
@@ -13,7 +15,6 @@ function pointshoot:WeaponParse(wp)
     -- 原版武器, 查表
     if not wp.Primary then
         wp.Primary = self.noscriptedgunsPrimary[wp:GetClass()]
-        return wp.Primary
     end
 
     if not istable(wp.Primary) then
@@ -26,6 +27,7 @@ function pointshoot:WeaponParse(wp)
         wp.Primary.Force = wp.Bullet.PhysicsMultiplier
         wp.Primary.IsMelee = false
         wp.Primary.Num = wp.Bullet.NumBullets
+        wp.PlayAttackAnim = wp.PlayAttackAnim or pointshoot.MWBPlayAttackAnim
     end
 
     wp.Primary.Damage = wp.Primary.Damage or 0
@@ -35,9 +37,38 @@ function pointshoot:WeaponParse(wp)
     wp.Primary.ActPrimary = wp.Primary.ActPrimary or ACT_VM_PRIMARYATTACK
     wp.Primary.ActDeploy = wp.Primary.ActDeploy or ACT_VM_DEPLOY
     wp.Primary.Spread = isvector(wp.Primary.Spread) and wp.Primary.Spread or pointshoot.zerovec
-        
+    wp.Primary.Recoil = wp.Primary.Recoil or 1
+    wp.MuzzleFlashCustom = wp.MuzzleFlashCustom or pointshoot.emptyfunc
+    wp.MakeShell = wp.MakeShell or pointshoot.emptyfunc
+    wp.MuzzleSmoke = wp.MuzzleSmoke or pointshoot.emptyfunc
+    wp.PlayAttackAnim = wp.PlayAttackAnim or pointshoot.PlayAttackAnim
+
     return wp.Primary
 end
+
+pointshoot.MWBPlayAttackAnim = function(self, _)
+    if not self.GetViewModel then
+        return
+    end
+
+    local vm = self:GetViewModel()
+    if not IsValid(vm) or not vm.PlaySequence then return end
+    
+    vm:PlaySequence(ACT_VM_PRIMARYATTACK)
+end
+
+
+pointshoot.PlayAttackAnim = function(self, ply)
+    local vm = ply:GetViewModel()
+    if not IsValid(vm) then return end
+    local seq = vm:SelectWeightedSequence(ACT_VM_PRIMARYATTACK)
+    
+    if (seq == -1) then return end
+    
+    vm:SendViewModelMatchingSequence(seq)
+    vm:SetPlaybackRate(1)
+end
+
 
 pointshoot.DecrAmmo = function(self, ply)
     if not self.Primary.IsMelee and not self.Primary.IsGrenade then
@@ -74,14 +105,11 @@ pointshoot.Fire = function(self, start, endpos, dir, attacker)
             self:EmitSound(self.Primary.Sound)
         end
 
-        local vm = attacker:GetViewModel()
-        if not IsValid(vm) then return end
-        local seq = vm:SelectWeightedSequence(self.Primary.ActPrimary)
-        
-        if (seq == -1) then return end
-        
-        vm:SendViewModelMatchingSequence(seq)
-        vm:SetPlaybackRate(1)
+        self:MuzzleFlashCustom()
+        self:MakeShell()
+        self:MuzzleSmoke()
+        self:PlayAttackAnim(attacker)
+        pointshoot:SetRecoil(-5 * math.abs(self.Primary.Recoil), 0, 0)
 
     elseif SERVER and not self.Primary.IsMelee and not self.Primary.IsGrenade then
         local damage = self.Primary.Damage * pointshoot.CVarsCache.ps_damage_mul
@@ -135,17 +163,90 @@ pointshoot.Fire = function(self, start, endpos, dir, attacker)
 end
 
 
+pointshoot.noscriptedgunsPrimary = {
+	['weapon_pistol'] = {
+		RPM = 800,
+		Damage = 10,
+        Force = 1,
+        Sound = 'Weapon_Pistol.Single',
+        Recoil = 0.5,
+	},
+	['weapon_357'] = {
+		RPM = 300,
+		Damage = 60,
+        Force = 25,
+        Sound = 'Weapon_357.Single',
+        Recoil = 2,
+	},
+	['weapon_ar2'] = {
+		RPM = 600,
+		Damage = 20,
+        Force = 1,
+        Sound = 'Weapon_AR2.Single',
+        Recoil = 1,
+	},
+	['weapon_crossbow'] = {
+		RPM = 180,
+		Damage = 150,
+        Force = 50,
+        Sound = 'Weapon_Crossbow.Single',
+        Recoil = 5,
+	},
+	['weapon_shotgun'] = {
+		RPM = 280,
+		Damage = 45,
+        Force = 1000,
+        Sound = 'Weapon_Shotgun.Single',
+        Spread = Vector(0.05, 0.05, 0),
+        Num = 8,
+        Recoil = 3,
+	},
+	['weapon_smg1'] = {
+		RPM = 1000,
+		Damage = 6,
+        Force = 1,
+        Sound = 'Weapon_SMG1.Single',
+        Recoil = 0.5,
+	},
+    ['weapon_crowbar'] = {
+        RPM = 999,
+        Damage = 0,
+        Force = 2000,
+        Sound = 'Weapon_Crowbar.Single',
+        IsMelee = true,
+        Recoil = 0,
+    },
+    ['weapon_stunstick'] = {
+        RPM = 999,
+        Damage = 0,
+        Force = 2000,
+        Sound = 'Weapon_Stunstick.Single',
+        IsMelee = true,
+        Recoil = 0,
+    },
+
+    ['weapon_frag'] = {
+        RPM = 300,
+        Damage = 0,
+        Force = 500,
+        IsGrenade = true,
+        ActPrimary = ACT_VM_THROW,
+        ActDeploy = ACT_VM_DEPLOY,
+        Recoil = 0,
+    },
+}
+
 -- ============= 鼠标控制 =============
 if CLIENT then
     local target = nil
     local duration = 0
-    local timer = 0
+    local Timer = 0
     function pointshoot:InputMouseApply(cmd, x, y, ang)
         if not target then 
             return 
         end
 
-        timer = timer + RealFrameTime()
+        Timer = Timer + RealFrameTime()
 
         local pos = pointshoot:GetMarkPos(target)
         if not pos then
@@ -156,22 +257,47 @@ if CLIENT then
 
         local targetDir = (pos - LocalPlayer():EyePos()):GetNormal()
         local origin = cmd:GetViewAngles()
-        local rate = math.Clamp(timer / duration, 0, 1) 
+        local rate = math.Clamp(Timer / duration, 0, 1) 
         rate = origin:Forward():Dot(targetDir) > 0.9995 and 1 or rate
         
         cmd:SetViewAngles(LerpAngle(rate, origin, targetDir:Angle()))
 
         if rate == 1 then
             hook.Run('PointShootAimFinish', pos, targetDir)
-            target, duration, timer = nil, 0, 0
+            target, duration, Timer = nil, 0, 0
         end
     end
 
     function pointshoot:Aim(mark, dura)
         duration = math.max(dura, 0.01)
-        timer = 0
+        Timer = 0
         target = mark
     end
+
+    local punchOffset = 0
+    local punchAcc = 0
+    local punchVel = 0
+    function pointshoot:Recoil(wep, vm, oP, oA, p, a)
+        if math.abs(punchOffset) < 0.05 and math.abs(punchVel) < 0.05 and math.abs(punchAcc) < 0.05 then
+            punchOffset = 0
+            punchVel = 0
+            punchAcc = 0
+        end
+
+        local dt = RealFrameTime()
+        punchOffset = punchOffset + (punchVel + punchAcc * 0.5 * dt) * dt//二阶泰勒
+        punchAcc = (-punchOffset) * 100 - 10 * punchVel
+        punchVel = punchVel + punchAcc * dt	
+
+        return p + punchOffset * a:Forward(), a
+    end
+
+    function pointshoot:SetRecoil(offset, vel, acc)
+        punchOffset = offset or punchOffset
+        punchVel = vel or punchVel
+        punchAcc = acc or punchAcc
+    end
+
 
     function pointshoot:AutoAim()
         if not self.Marks or #self.Marks < 1 or 
@@ -231,16 +357,36 @@ if CLIENT then
         self.shootCount = 0
         self.fireSyncTime = 0
         self.NextPrimaryFire = 0
+        
+        target = nil
+        duration = 0
+        Timer = 0
+
+        punchOffset = 0
+        punchVel = 0
+        punchAcc = 0
 
         hook.Add('InputMouseApply', 'pointshoot.autoaim', function(cmd, x, y, ang) self:InputMouseApply(cmd, x, y, ang) end)
         hook.Add('Think', 'pointshoot.autoaim', function() self:AutoAim() end)
         hook.Add('PointShootAimFinish', 'pointshoot.autoaim', function(pos, dir) self:AimFinish(pos, dir) end)
+        hook.Add('CalcViewModelView', 'pointshoot.recoil', function(wep, vm, oP, oA, p, a)
+            local wp, wa = p, a
+            if isfunction(wep.CalcViewModelView) then wp, wa = wep:CalcViewModelView(vm, oP, oA, p, a) end
+            if isfunction(wep.GetViewModelPosition) then wp, wa = wep:GetViewModelPosition(p, a) end
+            if not (wp and wa) then wp, wa = p, a end
+            return self:Recoil(wep, vm, oP, oA, wp, wa)
+        end)
     end
+
 
     function pointshoot:DisableAim()
         hook.Remove('InputMouseApply', 'pointshoot.autoaim')
         hook.Remove('Think', 'pointshoot.autoaim')
         hook.Remove('PointShootAimFinish', 'pointshoot.autoaim')
+        timer.Remove('pointshoot_remove_recoil')
+        timer.Create('pointshoot_remove_recoil', 2, 1, function()
+            hook.Remove('CalcViewModelView', 'pointshoot.recoil')
+        end)
     end
 elseif SERVER then
     util.AddNetworkString('PointShootFireSync')
@@ -285,67 +431,3 @@ elseif SERVER then
         end
     end
 end
-
-pointshoot.noscriptedgunsPrimary = {
-	['weapon_pistol'] = {
-		RPM = 800,
-		Damage = 10,
-        Force = 1,
-        Sound = 'Weapon_Pistol.Single'
-	},
-	['weapon_357'] = {
-		RPM = 300,
-		Damage = 60,
-        Force = 25,
-        Sound = 'Weapon_357.Single',
-	},
-	['weapon_ar2'] = {
-		RPM = 600,
-		Damage = 20,
-        Force = 1,
-        Sound = 'Weapon_AR2.Single',
-	},
-	['weapon_crossbow'] = {
-		RPM = 180,
-		Damage = 150,
-        Force = 50,
-        Sound = 'Weapon_Crossbow.Single',
-	},
-	['weapon_shotgun'] = {
-		RPM = 280,
-		Damage = 45,
-        Force = 1000,
-        Sound = 'Weapon_Shotgun.Single',
-        Spread = Vector(0.05, 0.05, 0),
-        Num = 8,
-	},
-	['weapon_smg1'] = {
-		RPM = 1000,
-		Damage = 6,
-        Force = 1,
-        Sound = 'Weapon_SMG1.Single',
-	},
-    ['weapon_crowbar'] = {
-        RPM = 999,
-        Damage = 0,
-        Force = 2000,
-        Sound = 'Weapon_Crowbar.Single',
-        IsMelee = true,
-    },
-    ['weapon_stunstick'] = {
-        RPM = 999,
-        Damage = 0,
-        Force = 2000,
-        Sound = 'Weapon_Stunstick.Single',
-        IsMelee = true,
-    },
-
-    ['weapon_frag'] = {
-        RPM = 300,
-        Damage = 0,
-        Force = 500,
-        IsGrenade = true,
-        ActPrimary = ACT_VM_THROW,
-        ActDeploy = ACT_VM_DEPLOY,
-    },
-}

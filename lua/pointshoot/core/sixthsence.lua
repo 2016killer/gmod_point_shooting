@@ -29,23 +29,37 @@ end)
 
 function sixthsense:Filter(ent)
 	if not IsValid(ent) then
-		return false
+		return nil
+	elseif not isfunction(ent.DrawModel) or not ent:GetModel() then
+		return nil
 	end
 
-	if not isfunction(ent.DrawModel) or not ent:GetModel() then
-		return false
-	end 
-
 	local class = ent:GetClass()
+	if string.StartWith(class, 'mg_') then
+		return nil
+	elseif class == 'npc_grenade_frag' then
+		local grenade = ClientsideModel(ent:GetModel())
+		grenade:SetPos(ent:GetPos())
+		grenade:SetAngles(ent:GetAngles())
+		grenade:SetParent(ent)
+		grenade.remove = true
+		table.insert(self.entqueue, grenade)
+
+		ent:CallOnRemove('sixthsense_grenade', function() if IsValid(grenade) then grenade:Remove() end end)
+
+		return grenade
+	end
+
+
 	if ent:IsRagdoll() or ent:GetOwner() == LocalPlayer() or ent:GetParent() == LocalPlayer() or class == 'lg_ragdoll' then
-		return false
+		return nil
 	end
 
 	if ent:GetMaxHealth() > 2 or ent:IsNPC() or scripted_ents.GetStored(class) or ent:IsVehicle() or ent:IsWeapon() or class == 'prop_dynamic' then
-		return true
+		return ent
 	end
 
-	return false
+	return nil
 end
 
 local function ClampAbs(num, min, max)
@@ -78,24 +92,10 @@ function sixthsense:Start(ply, targerRange, duration, durationAlpha, limitent, c
 			break
 		end
 
-		if ent:GetClass() == 'npc_grenade_frag' then
-			local grenade = ClientsideModel(ent:GetModel())
-			grenade:SetPos(ent:GetPos())
-			grenade:SetAngles(ent:GetAngles())
-			grenade:SetParent(ent)
-			grenade.remove = true
-			table.insert(self.entqueue, grenade)
-
-			ent:CallOnRemove('sixthsense_grenade', function() if IsValid(grenade) then grenade:Remove() end end)
-	
-			continue
+		ent = self:Filter(ent)
+		if ent then
+			table.insert(self.entqueue, ent)
 		end
-
-		if not self:Filter(ent) then
-			continue
-		end
-
-		table.insert(self.entqueue, ent)
 	end
 
 	self.cycle = cycle
