@@ -11,12 +11,6 @@ function SWEP:STCStart(wpclass, power, powercost)
         self.Marks = {}
         pointshoot.Marks[self:GetOwner():EntIndex()] = {}
     elseif CLIENT then
-        self.OriginWeaponClass = originwpclass
-        self.Power = power
-        self.PowerCost = powercost
-        self.Clip = pointshoot.GetAmmo(LocalPlayer():GetWeapon(wpclass), LocalPlayer())
-
-
         self.Marks = {}
         pointshoot.Marks = {}
         self.LockThink = false
@@ -33,6 +27,16 @@ function SWEP:STCStart(wpclass, power, powercost)
         end
 
         pointshoot:DisableAim()
+
+
+        local originwp = LocalPlayer():GetWeapon(wpclass)
+        pointshoot:WeaponParse(originwp)
+
+        self.OriginWeaponClass = wpclass
+        self.Power = power
+        self.PowerCost = powercost
+        self.PowerStartTime = RealTime()
+        self.Clip = pointshoot.GetAmmo(originwp, LocalPlayer())
     end
     self:StartEffect()
 end
