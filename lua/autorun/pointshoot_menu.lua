@@ -45,12 +45,6 @@ pointshoot.CVars = {
 	},
 
 	{
-		name = 'ps_inf_power',
-		default = '0',
-		widget = 'CheckBox'
-	},
-
-	{
 		name = 'ps_power_cost',
 		default = '0.1',
 		widget = 'NumSlider',

@@ -1,13 +1,40 @@
-function SWEP:SetStart(wpclass)
+SWEP:RegisterServerToClient('STCStart')
+
+function SWEP:SetStartData(wpclass, power, powercost)
     self.OriginWeaponClass = wpclass
-    if SERVER then 
-        self:CallOnClient('SetStart', wpclass) 
+    self.Power = power
+    self.PowerCost = powercost ~= 0 and powercost or nil
+end
+
+function SWEP:STCStart(wpclass, power, powercost)
+    if SERVER then
+        self.Marks = {}
+        pointshoot.Marks[self:GetOwner():EntIndex()] = {}
     elseif CLIENT then
-        local originwp = LocalPlayer():GetWeapon(wpclass)
-        local wpdata = pointshoot:WeaponParse(originwp)
-        if not wpdata then return end
-        self.Clip = pointshoot.GetAmmo(originwp, LocalPlayer())
+        self.OriginWeaponClass = originwpclass
+        self.Power = power
+        self.PowerCost = powercost
+        self.Clip = pointshoot.GetAmmo(LocalPlayer():GetWeapon(wpclass), LocalPlayer())
+
+
+        self.Marks = {}
+        pointshoot.Marks = {}
+        self.LockThink = false
+
+        if not game.SinglePlayer() then
+            hook.Add('Think', 'PSWPThink', function()
+                local wp = LocalPlayer():GetActiveWeapon()
+                if not IsValid(self) or wp ~= self then
+                    hook.Remove('Think', 'PSWPThink')
+                    return
+                end
+                self:Think()
+            end)
+        end
+
+        pointshoot:DisableAim()
     end
+    self:StartEffect()
 end
 
 
@@ -26,10 +53,7 @@ if SERVER then
             return true
         end
         
-        newwp:SetStart(oldwp:GetClass())
-        if not pointshoot.CVarsCache.ps_inf_power then
-            newwp:SetPowerCost(pointshoot.CVarsCache.ps_power_cost)
-        end
+        newwp:SetStartData(oldwp:GetClass(), 1, pointshoot.CVarsCache.ps_power_cost)
     end)
 
     concommand.Add('pointshoot', function(ply, cmd, args)

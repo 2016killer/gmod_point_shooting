@@ -34,6 +34,7 @@ function pointshoot:WeaponParse(wp)
     wp.Primary.Sound = wp.Primary.Sound or ''
     wp.Primary.ActPrimary = wp.Primary.ActPrimary or ACT_VM_PRIMARYATTACK
     wp.Primary.ActDeploy = wp.Primary.ActDeploy or ACT_VM_DEPLOY
+    wp.Primary.Spread = isvector(wp.Primary.Spread) and wp.Primary.Spread or pointshoot.zerovec
         
     return wp.Primary
 end
@@ -80,7 +81,7 @@ pointshoot.Fire = function(self, start, endpos, dir, attacker)
         local damagePenetration = self.Primary.Damage * pointshoot.CVarsCache.ps_damage_penetration_mul
 
         local bulletInfo = {
-            Spread = pointshoot.zerovec,
+            Spread = self.Primary.Spread,
             Force = self.Primary.Force,
             Num = self.Primary.Num,
             Tracer = 0,
@@ -221,7 +222,7 @@ if CLIENT then
     function pointshoot:EnableAim()
         self.aiming = false
         self.shootCount = 0
-        self.fireSyncTime = RealTime()
+        self.fireSyncTime = 0
         self.NextPrimaryFire = 0
 
         hook.Add('InputMouseApply', 'pointshoot.autoaim', function(cmd, x, y, ang) self:InputMouseApply(cmd, x, y, ang) end)
@@ -302,6 +303,7 @@ pointshoot.noscriptedgunsPrimary = {
 		Damage = 45,
         Force = 1000,
         Sound = 'Weapon_Shotgun.Single',
+        Spread = Vector(0.05, 0.05, 0),
         Num = 8,
 	},
 	['weapon_smg1'] = {

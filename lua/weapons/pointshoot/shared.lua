@@ -57,54 +57,23 @@ LoadLuaFiles('effects')
 
 
 function SWEP:Deploy()
-    if SERVER then
-        local owner = self:GetOwner()
-        if not IsValid(owner) or not owner:IsPlayer() then return end
-        local idx = owner:EntIndex()
-        self.Marks = {}
-        pointshoot.Marks[idx] = {}
-        self:CallOnClient('Deploy')
-    elseif CLIENT then
-        self.Marks = {}
-        pointshoot.Marks = {}
-        self.LockThink = false
-
-        if not game.SinglePlayer() then
-            hook.Add('Think', 'PSWPThink', function()
-                local wp = LocalPlayer():GetActiveWeapon()
-                if not IsValid(self) or wp ~= self then
-                    hook.Remove('Think', 'PSWPThink')
-                    return
-                end
-                self:Think()
-            end)
-        end
-
-        pointshoot:DisableAim()
-    end
-    self:StartEffect()
-
+    // print('fuck you')
+    if CLIENT then return end
+    local owner = self:GetOwner()
+    if not IsValid(owner) or not owner:IsPlayer() then return end
+    self:CallDoubleEnd('STCStart', self.OriginWeaponClass, self.Power, self.PowerCost)
     return true
 end
 
 function SWEP:Holster()
+    // print('fuck you')
+    if CLIENT then return end
     local owner = self:GetOwner()
-    if SERVER and (not IsValid(owner) or not owner:IsPlayer()) then
+    if not IsValid(owner) or not owner:IsPlayer() or not self.Marks or #self.Marks < 1 then
         pointshoot:TimeScaleFadeIn(1, nil)
-    elseif SERVER and (not self.Marks or #self.Marks < 1) then
-        pointshoot:TimeScaleFadeIn(1, nil)
-    elseif SERVER then
-        pointshoot.Marks[owner:EntIndex()] = table.Reverse(self.Marks)
-        self:ExecuteEffect()
-        self:CallOnClient('Holster')
-    elseif CLIENT and (not self.Marks or #self.Marks < 1) then
-        pointshoot:DisableAim()
-    elseif CLIENT then
-        pointshoot.Marks = table.Reverse(self.Marks)
-        pointshoot:EnableAim()
-        self:ExecuteEffect()
-        // RunConsoleCommand('pointshoot_remove')
+        return true
     end
+    self:CallDoubleEnd('STCExecute')
 
     return true
 end
