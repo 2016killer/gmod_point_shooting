@@ -53,7 +53,7 @@ if SERVER then
         end
 
         local wpdata = pointshoot:WeaponParse(oldwp)
-        if not wpdata then
+        if not wpdata or pointshoot.GetAmmo(oldwp, ply) < 1 then
             return true
         end
         

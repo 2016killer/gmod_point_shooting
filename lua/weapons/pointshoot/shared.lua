@@ -71,6 +71,7 @@ function SWEP:Holster()
     local owner = self:GetOwner()
     if not IsValid(owner) or not owner:IsPlayer() or not self.Marks or #self.Marks < 1 then
         pointshoot:TimeScaleFadeIn(1, nil)
+        self:Remove()
         return true
     end
     self:CallDoubleEnd('STCExecute')

@@ -39,8 +39,15 @@ function pointshoot:WeaponParse(wp)
     return wp.Primary
 end
 
-pointshoot.SetAmmo = function(self, ply)
-
+pointshoot.DecrAmmo = function(self, ply)
+    if not self.Primary.IsMelee and not self.Primary.IsGrenade then
+        self:SetClip1(math.max(0, self:Clip1() - 1))
+    elseif self.Primary.IsGrenade then
+        local curAmmo = ply:GetAmmoCount(self:GetPrimaryAmmoType() or 10)
+        ply:SetAmmo(math.max(0, curAmmo - 1), self:GetPrimaryAmmoType() or 10)
+    // else
+    //     return
+    end
 end
 
 pointshoot.GetAmmo = function(self, ply)
@@ -264,10 +271,16 @@ elseif SERVER then
                 local mark = marks[i]
                 table.remove(marks, i)
 
+                if self.GetAmmo(wp, ply) < 1 then
+                    continue
+                end
+
                 local endpos = pointshoot:GetMarkPos(mark)
                 if endpos then 
                     self.Fire(wp, start, endpos, nil, ply)
                 end
+                
+                self.DecrAmmo(wp, ply)
             end
         end
     end

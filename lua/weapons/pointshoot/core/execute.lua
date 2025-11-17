@@ -20,6 +20,7 @@ function SWEP:STCExecute()
         self:ExecuteEffect()
     elseif CLIENT and (not self.Marks or #self.Marks < 1) then
         pointshoot:DisableAim()
+        RunConsoleCommand('pointshoot_remove')
     elseif CLIENT then
         pointshoot.Marks = table.Reverse(self.Marks)
         pointshoot:EnableAim()

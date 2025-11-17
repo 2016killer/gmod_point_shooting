@@ -11,10 +11,20 @@ function SWEP:RegisterServerToClient(funcname)
 	elseif CLIENT then
 		net.Receive(netname, function()
 			local data = net.ReadTable(true)
-            local wp = LocalPlayer():GetWeapon('pointshoot')
-            if not IsValid(wp) then return end
 
-			self[funcname](wp, unpack(data))
+            -- fuck time
+            local timername = 'pswp_' .. funcname
+            timer.Remove(timername)
+            timer.Create(timername, 0, 10, function()
+                local wp = LocalPlayer():GetWeapon('pointshoot')
+                if not IsValid(wp) then 
+                    // print(timername, 'Adjust Delay', 0.05 * game.GetTimeScale())
+                    timer.Adjust(timername, 0.05 * game.GetTimeScale())
+                    return 
+                end
+                self[funcname](wp, unpack(data))
+                timer.Remove(timername)
+            end)
 		end)
 	end
 end
