@@ -22,9 +22,22 @@ function SWEP:STCExecute()
         pointshoot:DisableAim()
         RunConsoleCommand('pointshoot_remove')
     elseif CLIENT then
+        pointshoot:ThinkTimerRemove('pointshoot_thinktimer_execute')
+
+        local originwp = LocalPlayer():GetWeapon(self.OriginWeaponClass or '')
+        local deployTime = CurTime()
+        local deployDuration = originwp:ps_wppGetDeployDuration(LocalPlayer()) or 0
         pointshoot.Marks = table.Reverse(self.Marks)
-        pointshoot:EnableAim()
-        self:ExecuteEffect()
-        RunConsoleCommand('pointshoot_remove')
+        
+        pointshoot:ThinkTimer('pointshoot_thinktimer_execute', 
+            deployDuration * pointshoot.CVarsCache.ps_deploy_duration_mul, 
+            1, 
+            function()
+                pointshoot:EnableAim()
+                self:ExecuteEffect()
+                RunConsoleCommand('pointshoot_remove')
+            end, 
+            'cur'
+        )
     end
 end

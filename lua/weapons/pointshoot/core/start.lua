@@ -2,8 +2,10 @@ SWEP:RegisterServerToClient('STCStart')
 
 function SWEP:SetStartData(wpclass, power, powercost)
     self.OriginWeaponClass = wpclass
+    // self.Power = powercost ~= 0 and power or nil
+    // self.PowerCost = powercost ~= 0 and powercost or nil
     self.Power = power
-    self.PowerCost = powercost ~= 0 and powercost or nil
+    self.PowerCost = powercost
 end
 
 function SWEP:STCStart(wpclass, power, powercost)
@@ -62,13 +64,15 @@ if SERVER then
         newwp:SetStartData(oldwp:GetClass(), 1, pointshoot.CVarsCache.ps_power_cost)
     end)
 
-    concommand.Add('pointshoot', function(ply, cmd, args)
+    concommand.Add('+pointshoot', function(ply, cmd, args)
         local pswp = ents.Create('pointshoot')
         pswp:SetPos(ply:GetPos())
         pswp:Spawn()
         ply:PickupWeapon(pswp)
         ply:SelectWeapon(pswp)
     end)
+
+    concommand.Add('-pointshoot', pointshoot.emptyfunc)
 
     concommand.Add('pointshoot_remove', function(ply, cmd, args)
         local wp = ply:GetWeapon('pointshoot')

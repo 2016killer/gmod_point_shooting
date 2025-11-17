@@ -1,6 +1,6 @@
 local pointshoot = pointshoot
 
-local function GetDeployAnimTime(self, ply) 
+local function GetDeployDuration(self, ply) 
     local vm = ply:GetViewModel()
     if not IsValid(vm) then 
         return 0 
@@ -51,7 +51,7 @@ pointshoot:RegisterWhiteList('weapon_pistol', {
     Sound = 'Weapon_Pistol.Single',
     Recoil = 0.5,
 
-    GetDeployAnimTime = GetDeployAnimTime,
+    GetDeployDuration = GetDeployDuration,
     GetRPM = GunGetRPM,
     PlayAttackAnim = GunPlayAttackAnim,
     GetBulletInfo = GunGetBulletInfo,
@@ -66,7 +66,7 @@ pointshoot:RegisterWhiteList('weapon_357', {
     Sound = 'Weapon_357.Single',
     Recoil = 2,
 
-    GetDeployAnimTime = GetDeployAnimTime,
+    GetDeployDuration = GetDeployDuration,
     GetRPM = GunGetRPM,
     PlayAttackAnim = GunPlayAttackAnim,
     GetBulletInfo = GunGetBulletInfo,
@@ -81,7 +81,7 @@ pointshoot:RegisterWhiteList('weapon_ar2', {
     Sound = 'Weapon_AR2.Single',
     Recoil = 1,
 
-    GetDeployAnimTime = GetDeployAnimTime,
+    GetDeployDuration = GetDeployDuration,
     GetRPM = GunGetRPM,
     PlayAttackAnim = GunPlayAttackAnim,
     GetBulletInfo = GunGetBulletInfo,
@@ -96,7 +96,7 @@ pointshoot:RegisterWhiteList('weapon_crossbow', {
     Sound = 'Weapon_Crossbow.Single',
     Recoil = 5,
 
-    GetDeployAnimTime = GetDeployAnimTime,
+    GetDeployDuration = GetDeployDuration,
     GetRPM = GunGetRPM,
     PlayAttackAnim = GunPlayAttackAnim,
     GetBulletInfo = GunGetBulletInfo,
@@ -113,7 +113,7 @@ pointshoot:RegisterWhiteList('weapon_shotgun', {
     Num = 8,
     Recoil = 3,
 
-    GetDeployAnimTime = GetDeployAnimTime,
+    GetDeployDuration = GetDeployDuration,
     GetRPM = GunGetRPM,
     PlayAttackAnim = GunPlayAttackAnim,
     GetBulletInfo = GunGetBulletInfo,
@@ -128,7 +128,7 @@ pointshoot:RegisterWhiteList('weapon_smg1', {
     Sound = 'Weapon_SMG1.Single',
     Recoil = 0.5,
 
-    GetDeployAnimTime = GetDeployAnimTime,
+    GetDeployDuration = GetDeployDuration,
     GetRPM = GunGetRPM,
     PlayAttackAnim = GunPlayAttackAnim,
     GetBulletInfo = GunGetBulletInfo,
@@ -168,7 +168,7 @@ pointshoot:RegisterWhiteList('weapon_crowbar', {
     Force = 2000,
     Sound = 'Weapon_Crowbar.Single',
 
-    GetDeployAnimTime = GetDeployAnimTime,
+    GetDeployDuration = GetDeployDuration,
     GetRPM = pointshoot.emptyfunc,
     PlayAttackAnim = pointshoot.emptyfunc,
     GetBulletInfo = MeleeFireOverride,
@@ -180,7 +180,7 @@ pointshoot:RegisterWhiteList('weapon_stunstick', {
     Force = 2000,
     Sound = 'Weapon_Stunstick.Single',
 
-    GetDeployAnimTime = GetDeployAnimTime,
+    GetDeployDuration = GetDeployDuration,
     GetRPM = pointshoot.emptyfunc,
     PlayAttackAnim = pointshoot.emptyfunc,
     GetBulletInfo = MeleeFireOverride,
@@ -236,7 +236,7 @@ pointshoot:RegisterWhiteList('weapon_frag', {
     Force = 2000,
     Delay = 0.5,
 
-    GetDeployAnimTime = GetDeployAnimTime,
+    GetDeployDuration = GetDeployDuration,
     GetRPM = GrenadeGetRPM,
     PlayAttackAnim = GrenadePlayAttackAnim,
     GetBulletInfo = GrenadeFireOverride,

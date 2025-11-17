@@ -51,8 +51,17 @@ pointshoot.CVars = {
 		min = 0,
 		max = 1,
 		decimals = 1,
-	}
+	},
 
+	{
+		name = 'ps_deploy_duration_mul',
+		default = '0.8',
+		widget = 'NumSlider',
+		min = 0,
+		max = 1,
+		decimals = 1,
+		help = true
+	}
 }
 
 if SERVER then

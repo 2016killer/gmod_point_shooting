@@ -171,3 +171,34 @@ function pointshoot:TimeScaleFadeIn(target, duration)
         end
     end)
 end
+
+if CLIENT then
+    function pointshoot:ThinkTimer(identifier, delay, repetitions, func, timemode)
+        local gettime = timemode == 'cur' and CurTime or RealTime
+        local nexttime = gettime() + delay
+        local lastcall = 0
+        hook.Add('Think', identifier, function()
+            local now = gettime()
+            if now < nexttime then return end
+            func()
+
+            nexttime = now + delay
+            lastcall = lastcall + 1
+            if repetitions ~= 0 and lastcall >= repetitions then 
+                gettime = nil
+                nexttime = nil
+                lastcall = nil
+                hook.Remove('Think', identifier) 
+            end  
+        end)
+    end
+
+    function pointshoot:ThinkTimerRemove(identifier)
+        hook.Remove('Think', identifier) 
+    end
+
+    function pointshoot:ThinkTimerSimple(delay, func, timemode)
+        local identifier = 'pointshoot_thinktimer_simple_' .. math.random(-65536, 65535)
+        self:ThinkTimer(identifier, delay, 1, func, timemode)
+    end
+end
