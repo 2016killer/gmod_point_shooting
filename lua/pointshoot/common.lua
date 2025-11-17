@@ -1,5 +1,3 @@
-pointshoot = pointshoot or {}
-
 function pointshoot:RegisterServerToClient(funcname)
     if not string.StartWith(funcname, 'STC') then
         ErrorNoHalt(string.format('[PointShoot]: RegisterServerToClient: funcname must not start with STC, "%s"\n', funcname))

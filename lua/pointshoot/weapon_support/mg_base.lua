@@ -1,6 +1,4 @@
-pointshoot = pointshoot or {}
 local zerovec = Vector(0, 0, 0)
-
 
 local function MWBGunGetRPM(self)
     return self.Primary.RPM
@@ -27,19 +25,19 @@ local function MWBGunGetBulletInfo(self, ply, start, endpos, dir)
         Damage = istable(self.Bullet.Damage) and self.Bullet.Damage[1] or nil,
         Spread = self.Primary.Spread or zerovec,
         Force = self.Bullet.PhysicsMultiplier,
-        Num = self.Bullet.NumBullets
+        Num = self.Bullet.NumBullets,
         Tracer = 0
     }
 end
 
 
-pointshoot.WhiteListBase['mg_base'] = pointshoot.WhiteListBase['mg_base'] or {
+pointshoot:RegisterWhiteListBase('mg_base', {
     GetRPM = MWBGunGetRPM,
     PlayAttackAnim = MWBGunPlayAttackAnim,
     GetBulletInfo = MWBGunGetBulletInfo,
     DecrClip = MWBGunDecrClip,
     GetClip = MWBGunGetClip,
-}
+})
 
 MWBGunGetRPM = nil
 MWBGunPlayAttackAnim = nil

@@ -1,7 +1,3 @@
-pointshoot = pointshoot or {}
-
-pointshoot.WhiteList = pointshoot.WhiteList or {}
-
 local function GunGetRPM(self) 
     return self.ps_wppdata.RPM 
 end
@@ -32,7 +28,7 @@ end
 local function GunGetClip(self, _) return self:Clip1() end
 local function GunDecrClip(self, _) self:SetClip1(math.max(0, self:Clip1() - 1)) end
 
-pointshoot.WhiteList['weapon_pistol'] = pointshoot.WhiteList['weapon_pistol'] or {
+pointshoot:RegisterWhiteList('weapon_pistol', {
     RPM = 800,
     Damage = 10,
     Force = 1,
@@ -44,9 +40,9 @@ pointshoot.WhiteList['weapon_pistol'] = pointshoot.WhiteList['weapon_pistol'] or
     GetBulletInfo = GunGetBulletInfo,
     DecrClip = GunDecrClip,
     GetClip = GunGetClip,
-}
+})
 
-pointshoot.WhiteList['weapon_357'] = pointshoot.WhiteList['weapon_357'] or {
+pointshoot:RegisterWhiteList('weapon_357', {
     RPM = 300,
     Damage = 60,
     Force = 25,
@@ -58,9 +54,9 @@ pointshoot.WhiteList['weapon_357'] = pointshoot.WhiteList['weapon_357'] or {
     GetBulletInfo = GunGetBulletInfo,
     DecrClip = GunDecrClip,
     GetClip = GunGetClip,
-}
+})
 
-pointshoot.WhiteList['weapon_ar2'] = pointshoot.WhiteList['weapon_ar2'] or {
+pointshoot:RegisterWhiteList('weapon_ar2', {
     RPM = 600,
     Damage = 20,
     Force = 1,
@@ -72,9 +68,9 @@ pointshoot.WhiteList['weapon_ar2'] = pointshoot.WhiteList['weapon_ar2'] or {
     GetBulletInfo = GunGetBulletInfo,
     DecrClip = GunDecrClip,
     GetClip = GunGetClip,
-}
+})
 
-pointshoot.WhiteList['weapon_crossbow'] = pointshoot.WhiteList['weapon_crossbow'] or {
+pointshoot:RegisterWhiteList('weapon_crossbow', {
     RPM = 180,
     Damage = 150,
     Force = 50,
@@ -86,9 +82,9 @@ pointshoot.WhiteList['weapon_crossbow'] = pointshoot.WhiteList['weapon_crossbow'
     GetBulletInfo = GunGetBulletInfo,
     DecrClip = GunDecrClip,
     GetClip = GunGetClip,
-}
+})
 
-pointshoot.WhiteList['weapon_shotgun'] = pointshoot.WhiteList['weapon_shotgun'] or {
+pointshoot:RegisterWhiteList('weapon_shotgun', {
     RPM = 280,
     Damage = 45,
     Force = 50,
@@ -102,9 +98,9 @@ pointshoot.WhiteList['weapon_shotgun'] = pointshoot.WhiteList['weapon_shotgun'] 
     GetBulletInfo = GunGetBulletInfo,
     DecrClip = GunDecrClip,
     GetClip = GunGetClip,
-}
+})
 
-pointshoot.WhiteList['weapon_smg1'] = pointshoot.WhiteList['weapon_smg1'] or {
+pointshoot:RegisterWhiteList('weapon_smg1', {
     RPM = 1000,
     Damage = 6,
     Force = 1,
@@ -116,7 +112,7 @@ pointshoot.WhiteList['weapon_smg1'] = pointshoot.WhiteList['weapon_smg1'] or {
     GetBulletInfo = GunGetBulletInfo,
     DecrClip = GunDecrClip,
     GetClip = GunGetClip,
-}
+})
 
 GunGetRPM = nil
 GunPlayAttackAnim = nil
@@ -146,7 +142,7 @@ local function MeleeFireOverride(self, ply, start, endpos, dir)
     end
 end
 
-pointshoot.WhiteList['weapon_crowbar'] = pointshoot.WhiteList['weapon_crowbar'] or {
+pointshoot:RegisterWhiteList('weapon_crowbar', {
     Force = 2000,
     Sound = 'Weapon_Crowbar.Single',
 
@@ -155,9 +151,9 @@ pointshoot.WhiteList['weapon_crowbar'] = pointshoot.WhiteList['weapon_crowbar'] 
     GetBulletInfo = MeleeFireOverride,
     DecrClip = pointshoot.emptyfunc,
     GetClip = MeleeGetClip,
-}
+})
 
-pointshoot.WhiteList['weapon_stunstick'] = pointshoot.WhiteList['weapon_stunstick'] or {
+pointshoot:RegisterWhiteList('weapon_stunstick', {
     Force = 2000,
     Sound = 'Weapon_Stunstick.Single',
 
@@ -166,7 +162,7 @@ pointshoot.WhiteList['weapon_stunstick'] = pointshoot.WhiteList['weapon_stunstic
     GetBulletInfo = MeleeFireOverride,
     DecrClip = pointshoot.emptyfunc,
     GetClip = MeleeGetClip
-}
+})
 
 MeleeFireOverride = nil
 MeleeGetClip = nil
@@ -207,17 +203,23 @@ local function GrenadeFireOverride(self, ply, start, endpos, dir)
     end  
 end
 
-pointshoot.WhiteList['weapon_frag'] = pointshoot.WhiteList['weapon_frag'] or {
+local function GrenadeGetRPM(self)
+    return self.ps_wppdata.RPM
+end
+
+pointshoot:RegisterWhiteList('weapon_frag', {
+    RPM = 600,
     Force = 2000,
     Delay = 0.5,
 
-    GetRPM = pointshoot.emptyfunc,
+    GetRPM = GrenadeGetRPM,
     PlayAttackAnim = GrenadePlayAttackAnim,
     GetBulletInfo = GrenadeFireOverride,
     DecrClip = GrenadeDecrClip,
     GetClip = GrenadeGetClip
-}
+})
 
+GrenadeGetRPM = nil
 GrenadePlayAttackAnim = nil
 GrenadeFireOverride = nil
 GrenadeDecrClip = nil

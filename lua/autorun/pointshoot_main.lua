@@ -3,8 +3,12 @@
 ]]
 
 pointshoot = pointshoot or {}
-local pointshoot = pointshoot
+pointshoot.emptyfunc = function() end
+pointshoot.WhiteList = pointshoot.WhiteList or {}
+pointshoot.WhiteListBase = pointshoot.WhiteListBase or {}
 pointshoot.Marks = {}
+
+
 
 if SERVER then
     concommand.Add('pointshoot_debug_wpdata_sv', function(ply)
@@ -69,3 +73,4 @@ AddCSLuaFile('pointshoot/common.lua')
 include('pointshoot/common.lua')
 LoadLuaFiles('core')
 LoadLuaFiles('effects')
+LoadLuaFiles('weapon_support')

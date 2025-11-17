@@ -2,10 +2,28 @@
     作者: 白狼
 ]]
 
-pointshoot = pointshoot or {}
-pointshoot.emptyfunc = function() end
-pointshoot.WhiteList = pointshoot.WhiteList or {}
-pointshoot.WhiteListBase = pointshoot.WhiteListBase or {}
+function pointshoot:RegisterWhiteList(class, data)
+    self.WhiteList[class] = data
+end
+
+function pointshoot:RegisterWhiteListBase(classbase, data, top_or_bottom)
+    data.Base = classbase
+
+    for i = #self.WhiteListBase, 1, -1 do
+        local v = self.WhiteListBase[i]
+        if v.Base == classbase then
+            table.remove(self.WhiteListBase, i)
+            break
+        end
+    end
+
+    if top_or_bottom == true then
+        table.insert(self.WhiteListBase, 1, data)
+    else
+        table.insert(self.WhiteListBase, data)
+    end
+end
+
 function pointshoot:WeaponParse(wp)
     if not IsValid(wp) then 
         return false
@@ -19,9 +37,9 @@ function pointshoot:WeaponParse(wp)
     local result = self.WhiteList[class]
 
     if not result then
-        for basename, v in pairs(self.WhiteListBase) do
-            if weapons.IsBasedOn(class, basename) then
-                result = v
+        for _, data in ipairs(self.WhiteListBase) do
+            if weapons.IsBasedOn(class, data.Base) then
+                result = data
                 break
             end
         end
@@ -184,6 +202,7 @@ if CLIENT then
         hook.Add('InputMouseApply', 'pointshoot.autoaim', function(cmd, x, y, ang) self:InputMouseApply(cmd, x, y, ang) end)
         hook.Add('Think', 'pointshoot.autoaim', function() self:AutoAim() end)
         hook.Add('PointShootAimFinish', 'pointshoot.autoaim', function(pos, dir) self:AimFinish(pos, dir) end)
+        timer.Remove('pointshoot_remove_recoil')
         hook.Add('CalcViewModelView', 'pointshoot.recoil', function(wep, vm, oP, oA, p, a)
             local wp, wa = p, a
             if isfunction(wep.CalcViewModelView) then wp, wa = wep:CalcViewModelView(vm, oP, oA, p, a) end
@@ -238,7 +257,10 @@ elseif SERVER then
 
                 local dir = (endpos - start):GetNormal()
                 local bulletInfo = wp:ps_wppGetBulletInfo(ply, start, endpos, dir)
-                if not bulletInfo then continue end
+                if not bulletInfo then 
+                    wp:ps_wppDecrClip(ply)
+                    continue 
+                end
 
                 local damage = (bulletInfo.Damage or 1)
                 bulletInfo.Dir = dir
