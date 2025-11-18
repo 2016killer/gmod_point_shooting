@@ -63,6 +63,7 @@ function SWEP:Deploy()
     if CLIENT then return end
     local owner = self:GetOwner()
     if not IsValid(owner) or not owner:IsPlayer() then return end
+    if not self.OriginWeaponClass then return end
     self:CallDoubleEnd('STCStart', self.OriginWeaponClass, self.Power, self.PowerCost)
     return true
 end

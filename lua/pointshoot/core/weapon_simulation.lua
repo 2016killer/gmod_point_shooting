@@ -29,7 +29,9 @@ function pointshoot:WeaponParse(wp)
         return false
     end
 
-    if wp.ps_wppIsParsed then 
+    -- 已解析, 这玩意默认是函数, 如果其他人注入时误用了类型可能会出现意料之外的错误
+    -- 函数的属性会在加载关卡时被清理, 而正常能保留, 所以这里若是用了数据, 就会在闯关后错误解析
+    if wp.ps_wppGetClip then 
         return true
     end
 
@@ -55,7 +57,6 @@ function pointshoot:WeaponParse(wp)
         wp.ps_wppGetClip = result.GetClip
         wp.ps_wppAnimReset = result.AnimReset
 
-        wp.ps_wppIsParsed = true
         wp.ps_wppdata = result
         return true
     else
