@@ -7,7 +7,7 @@ pointshoot.emptyfunc = function() end
 pointshoot.WhiteList = pointshoot.WhiteList or {}
 pointshoot.WhiteListBase = pointshoot.WhiteListBase or {}
 pointshoot.Marks = {}
-
+pointshoot.Version = 'Version: beta'
 
 
 if SERVER then

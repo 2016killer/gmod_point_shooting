@@ -148,6 +148,8 @@ pointshoot.CreateGlobalMenu = function(panel)
             RunConsoleCommand(v.name, v.default)
         end
 	end
+
+	panel:ControlHelp(pointshoot.Version)
 end
 
 
