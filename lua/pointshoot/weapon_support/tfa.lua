@@ -104,9 +104,13 @@ local function TFAGunGetClip(self, ply)
 end
 
 local function TFAGunGetBulletInfo(self, ply, start, endpos, dir)
+    local isshotgun = (self.Primary.Num or 0) > 1
+    local spread = self.Primary.Spread or 0
+    spread = isvector(spread) and spread or Vector(spread, spread, 0)
+    // print(self.Primary.Num, spread)
     return {
         Damage = self.Primary.Damage,
-        Spread = isvector(self.Primary.Spread) and self.Primary.Spread or Vector(self.Primary.Spread, self.Primary.Spread, 0),
+        Spread = isshotgun and spread or zerovec,
         Force = self.Primary.Force,
         Num = self.Primary.Num,
         Tracer = 0
