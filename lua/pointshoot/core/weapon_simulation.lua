@@ -242,6 +242,11 @@ elseif SERVER then
         local wp = ply:GetActiveWeapon()
         local parseSucc = self:WeaponParse(wp)
 
+        -- 需要同步一下动画
+        if len == count then
+            // print('fuck you')
+            wp:ps_wppPlayAttackAnim(ply)
+        end
         if not parseSucc then 
             for i = len, math.max(len - count + 1, 1), -1 do
                 table.remove(marks, i)

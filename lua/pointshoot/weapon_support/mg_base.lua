@@ -1,14 +1,22 @@
 local pointshoot = pointshoot
 local zerovec = Vector(0, 0, 0)
 
+local function MWBGetDeployDuration(self, ply) 
+    return self:GetAnimLength('Draw')
+end
+
 local function MWBGunGetRPM(self)
     return self.Primary.RPM
 end
 
 local function MWBGunPlayAttackAnim(self, ply)
-    self:PlayViewModelAnimation('Fire')
+    if CLIENT then 
+        pointshoot:SetRecoil(-5 * math.abs(self.Primary.Recoil or 1), 0, 0)
+    end
+    if not IsValid(self:GetViewModel()) then return end 
+    self:GetViewModel():PlayAnimation('Fire', true) -- fuck you
+    self:SetNextPrimaryFire(0)
     self:EmitSound(self.Primary.Sound or '')
-    pointshoot:SetRecoil(-5 * math.abs(self.Primary.Recoil or 1), 0, 0)
 end
 
 local function MWBGunDecrClip(self, ply)
@@ -33,6 +41,8 @@ end
 
 
 pointshoot:RegisterWhiteListBase('mg_base', {
+    Modify = MWBModify,
+    GetDeployDuration = MWBGetDeployDuration,
     GetRPM = MWBGunGetRPM,
     PlayAttackAnim = MWBGunPlayAttackAnim,
     GetBulletInfo = MWBGunGetBulletInfo,
@@ -45,3 +55,5 @@ MWBGunPlayAttackAnim = nil
 MWBGunGetBulletInfo = nil
 MWBGunDecrClip = nil
 MWBGunGetClip = nil
+
+MWBGetDeployDuration = nil

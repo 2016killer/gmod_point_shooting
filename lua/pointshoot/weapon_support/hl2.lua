@@ -19,15 +19,16 @@ local function GunGetRPM(self)
 end
 
 local function GunPlayAttackAnim(self, ply)
+    if CLIENT then pointshoot:SetRecoil(-5 * math.abs(self.ps_wppdata.Recoil or 1), 0, 0) end
+
     self:EmitSound(self.ps_wppdata.Sound or '')
-    pointshoot:SetRecoil(-5 * math.abs(self.ps_wppdata.Recoil), 0, 0)
 
     local vm = ply:GetViewModel()
     if not IsValid(vm) then return end
     local seq = vm:SelectWeightedSequence(ACT_VM_PRIMARYATTACK)
     if (seq == -1) then return end
+
     vm:SendViewModelMatchingSequence(seq)
-    vm:SetPlaybackRate(1)
 end
 
 local function GunGetBulletInfo(self, ply, start, endpos, dir)

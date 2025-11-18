@@ -80,18 +80,19 @@ local function TFAGunGetRPM(self)
 end
 
 local function TFAGunPlayAttackAnim(self, ply)
+    if CLIENT then pointshoot:SetRecoil(-5 * math.abs(self.Primary.Recoil or 1), 0, 0) end
+
     self:MuzzleFlashCustom()
     self:MakeShell()
     self:MuzzleSmoke()
     self:EmitSound(self.Primary.Sound or '')
-    pointshoot:SetRecoil(-5 * math.abs(self.Primary.Recoil or 1), 0, 0)
 
     local vm = ply:GetViewModel()
     if not IsValid(vm) then return end
     local seq = vm:SelectWeightedSequence(ACT_VM_PRIMARYATTACK)
     if (seq == -1) then return end
+
     vm:SendViewModelMatchingSequence(seq)
-    vm:SetPlaybackRate(1)
 end
 
 local function TFAGunDecrClip(self, ply)
