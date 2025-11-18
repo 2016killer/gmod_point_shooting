@@ -18,6 +18,7 @@ function SWEP:STCExecute()
         local owner = self:GetOwner()
         pointshoot.Marks[owner:EntIndex()] = table.Reverse(self.Marks)
         self:ExecuteEffect()
+        // PrintTable(pointshoot.Marks[owner:EntIndex()])
     elseif CLIENT and (not self.Marks or #self.Marks < 1) then
         pointshoot:DisableAim()
         RunConsoleCommand('pointshoot_remove')
@@ -28,7 +29,7 @@ function SWEP:STCExecute()
         local deployTime = CurTime()
         local deployDuration = originwp:ps_wppGetDeployDuration(LocalPlayer()) or 0
         pointshoot.Marks = table.Reverse(self.Marks)
-        
+        // PrintTable(pointshoot.Marks)
         pointshoot:ThinkTimer('pointshoot_thinktimer_execute', 
             deployDuration * pointshoot.CVarsCache.ps_deploy_duration_mul, 
             1, 
