@@ -44,7 +44,7 @@ elseif CLIENT then
         local scrW, scrH = ScrW(), ScrH()
         local size = 128 * rate
         local alpha = 400 * (1 - rate)
-        local x, y = scrW * 0.5, 128
+        local x, y = scrW * 0.5, scrH - 128
         surface.SetDrawColor(255, 255, 255, alpha)
         surface.SetMaterial(ready_mat)
         surface.DrawTexturedRectRotated(x, y, size, size, 0)
