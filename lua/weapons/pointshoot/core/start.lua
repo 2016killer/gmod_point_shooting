@@ -12,6 +12,7 @@ function SWEP:STCStart(wpclass, power, powercost)
     if SERVER then
         self.Marks = {}
         pointshoot.Marks[self:GetOwner():EntIndex()] = {}
+        pointshoot.PowerBuoyancyTime = CurTime() + 2
     elseif CLIENT then
         self.Marks = {}
         pointshoot.Marks = {}
