@@ -1,13 +1,14 @@
 SWEP:RegisterClientToServer('CTSExecuteRequest')
 SWEP:RegisterServerToClient('STCExecute')
 
-function SWEP:CTSExecuteRequest()
+function SWEP:CTSExecuteRequest(endpower)
     local owner = self:GetOwner()
 
     if SERVER and (not IsValid(owner) or not owner:IsPlayer() or not IsValid(owner:GetWeapon(self.OriginWeaponClass or ''))) then
         pointshoot:TimeScaleFadeIn(1, nil)
     elseif SERVER then
         owner:SelectWeapon(owner:GetWeapon(self.OriginWeaponClass or ''))
+        owner:SetNW2Float('psnw_power', math.Clamp(endpower or 1, 0, 1))
     elseif CLIENT then
         return
     end
@@ -35,7 +36,7 @@ function SWEP:STCExecute()
             1, 
             function()
                 pointshoot:EnableAim()
-                self:ExecuteEffect()
+                if IsValid(self) then self:ExecuteEffect() end
                 RunConsoleCommand('pointshoot_remove')
             end, 
             'cur'

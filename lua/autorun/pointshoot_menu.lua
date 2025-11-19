@@ -1,3 +1,5 @@
+AddCSLuaFile()
+
 pointshoot = pointshoot or {}
 pointshoot.CVarsCache = {}
 pointshoot.CVars = {
@@ -61,7 +63,28 @@ pointshoot.CVars = {
 		max = 1,
 		decimals = 1,
 		help = true
+	},
+
+	{
+		name = 'ps_buoyancy',
+		default = '0.1',
+		widget = 'NumSlider',
+		min = 0,
+		max = 1,
+		decimals = 1,
+		help = true
+	},
+
+	{
+		name = 'ps_headshot_reward',
+		default = '0.3',
+		widget = 'NumSlider',
+		min = 0,
+		max = 1,
+		decimals = 1,
+		help = true
 	}
+
 }
 
 if SERVER then

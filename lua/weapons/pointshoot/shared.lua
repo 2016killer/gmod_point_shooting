@@ -100,7 +100,7 @@ function SWEP:Think()
     local rightKeyDown = game.SinglePlayer() and owner:KeyDown(IN_ATTACK2) or input.IsMouseDown(MOUSE_RIGHT)
     if rightKeyDown or self:PowerThink() then
         self.LockThink = true
-        self:CallDoubleEnd('CTSExecuteRequest')
+        self:CallDoubleEnd('CTSExecuteRequest', self.Power)
         self:ClearPowerCost()
         return
     end

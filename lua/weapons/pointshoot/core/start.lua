@@ -38,7 +38,6 @@ function SWEP:STCStart(wpclass, power, powercost)
         self.OriginWeaponClass = wpclass
         self.Power = power
         self.PowerCost = powercost
-        self.PowerStartTime = RealTime()
         self.Clip = originwp:ps_wppGetClip(LocalPlayer())
     end
     self:StartEffect()
@@ -56,12 +55,14 @@ if SERVER then
         end
 
         local parseSucc = pointshoot:WeaponParse(oldwp)
-        if not parseSucc or oldwp:ps_wppGetClip(ply) < 1 then
+        local curPower = ply:GetNW2Float('psnw_power', 1)
+        local powerCost = pointshoot.CVarsCache.ps_power_cost
+        if not parseSucc or oldwp:ps_wppGetClip(ply) < 1 or curPower <= powerCost then
             newwp:Remove()
             return true
         end
 
-        newwp:SetStartData(oldwp:GetClass(), 1, pointshoot.CVarsCache.ps_power_cost)
+        newwp:SetStartData(oldwp:GetClass(), curPower, powerCost)
     end)
 
     concommand.Add('+pointshoot', function(ply, cmd, args)

@@ -1,6 +1,7 @@
 --[[
     作者: 白狼
 ]]
+AddCSLuaFile()
 
 pointshoot = pointshoot or {}
 pointshoot.emptyfunc = function() end
@@ -48,7 +49,7 @@ local function LoadLuaFiles(dirname)
 end
 
 
-AddCSLuaFile()
+
 AddCSLuaFile('pointshoot/common.lua')
 include('pointshoot/common.lua')
 LoadLuaFiles('core')

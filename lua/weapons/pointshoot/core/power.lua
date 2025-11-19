@@ -1,15 +1,15 @@
 function SWEP:ClearPowerCost()
     self.Power = nil
     self.PowerCost = nil
-    self.PowerStartTime = nil
 end
 
 function SWEP:PowerThink()
-    if not self.Power then
+    if not self.Power or not self.PowerCost then
         return
     end
 
-    self.Power = Lerp((RealTime() - self.PowerStartTime) * self.PowerCost, 1, 0)
+    local dt = self.drawdt or RealFrameTime()
+    self.Power = self.Power - math.abs(dt * self.PowerCost)
 
     if not self.PowerTimeOutEffectLock and self.Power <= self.PowerCost then
         self:PowerTimeOutEffect()
@@ -21,12 +21,11 @@ end
 
 
 function SWEP:DrawPower()
-    if not self.Power then
+    if not self.Power or not self.PowerCost then
         return
     end
 
     local scrW, scrH = ScrW(), ScrH()
-    local alpha = math.Clamp((RealTime() - self.PowerStartTime) * 0.5, 0, 1)
     local w, h = scrW * 0.2, 40
     local x = (scrW - w) * 0.5
     local y = scrH - 2 * h
@@ -37,9 +36,9 @@ function SWEP:DrawPower()
 	surface.SetTextPos(x, y - h) 
 	surface.DrawText(self.Clip)
 
-	surface.SetDrawColor(170, 170, 170, alpha * 255)
+	surface.SetDrawColor(170, 170, 170, 255)
 	surface.DrawOutlinedRect(x, y, w, h)
-    surface.SetDrawColor(255, 255, 0, alpha * 100)
+    surface.SetDrawColor(255, 255, 0, 100)
     surface.DrawRect(x, y, w * self.Power, h)
 end
 

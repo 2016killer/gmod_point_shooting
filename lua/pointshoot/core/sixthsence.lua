@@ -27,6 +27,11 @@ concommand.Add('sixthsense', function(ply, cmd, args)
 	end
 end)
 
+sixthsense.WhiteList = {
+	['combine_mine'] = true,
+	['combine_mine_resistance'] = true,
+}
+
 function sixthsense:Filter(ent)
 	if not IsValid(ent) then
 		return nil
@@ -48,6 +53,8 @@ function sixthsense:Filter(ent)
 		ent:CallOnRemove('sixthsense_grenade', function() if IsValid(grenade) then grenade:Remove() end end)
 
 		return grenade
+	elseif self.WhiteList[class] then
+		return ent
 	end
 
 

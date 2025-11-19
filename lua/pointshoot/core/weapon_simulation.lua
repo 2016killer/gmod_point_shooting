@@ -253,6 +253,7 @@ elseif SERVER then
                 table.remove(marks, i)
             end
         else
+            wp.ps_flag = true
             for i = len, math.max(len - count + 1, 1), -1 do
                 local mark = marks[i]
                 table.remove(marks, i)
@@ -284,6 +285,7 @@ elseif SERVER then
 
                 wp:ps_wppDecrClip(ply)
             end
+            wp.ps_flag = false
         end
     end
 end
