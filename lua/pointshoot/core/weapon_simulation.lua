@@ -1,6 +1,80 @@
 --[[
     作者: 白狼
 ]]
+local cvars = {
+    {
+        name = 'ps_aim_cost',
+        default = '0.2',
+        call = 'GetFloat',
+        widget = 'NumSlider',
+        min = 0,
+        max = 5,
+        decimals = 2,
+    },
+
+    {
+        name = 'ps_rpm_mode',
+        default = '1',
+        call = 'GetBool',
+        widget = 'CheckBox',
+        help = true,
+    },
+    
+    {
+        name = 'ps_rpm_mul',
+        default = '1',
+        call = 'GetFloat',
+        widget = 'NumSlider',
+        min = 0.1,
+        max = 5,
+        decimals = 1
+    },
+
+    {
+        name = 'ps_damage_mul',
+        default = '1',
+        call = 'GetFloat',
+        widget = 'NumSlider',
+        min = 0,
+        max = 5,
+        decimals = 1
+    },
+
+    {
+        name = 'ps_damage_penetration_mul',
+        default = '1',
+        call = 'GetFloat',
+        widget = 'NumSlider',
+        min = 0,
+        max = 5,
+        decimals = 1,
+    },
+
+    {
+        name = 'ps_deploy_duration_mul',
+        default = '0.8',
+        call = 'GetFloat',
+        widget = 'NumSlider',
+        min = 0,
+        max = 1,
+        decimals = 1,
+        help = true
+    }
+}
+for _, cvar in ipairs(cvars) do pointshoot:RegisterCVar(cvar) end
+if SERVER then 
+    cvars = nil 
+elseif CLIENT then
+    hook.Add('PopulateToolMenu', 'pointshoot.menu.wpsimulation', function()
+        spawnmenu.AddToolMenuOption('Options', 
+            language.GetPhrase('#pointsh.category'), 
+            'pointshoot.menu.wpsimulation', 
+            language.GetPhrase('#pointsh.menu.wpsimulation'), '', '', 
+            function(panel) pointshoot:CreateCVarsMenu(panel, cvars) end
+        )
+    end)
+end
+
 
 function pointshoot:RegisterWhiteList(class, data)
     self.WhiteList[class] = data

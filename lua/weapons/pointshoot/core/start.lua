@@ -30,6 +30,8 @@ function SWEP:STCStart(wpclass, power, powercost)
 
         pointshoot:DisableAim()
         pointshoot:ThinkTimerRemove('pointshoot_thinktimer_execute')
+        pointshoot:RemoveDrawPowerTick()
+        pointshoot:RemoveReadyEffect()
 
         local originwp = LocalPlayer():GetWeapon(wpclass)
         local parseSucc = pointshoot:WeaponParse(originwp)

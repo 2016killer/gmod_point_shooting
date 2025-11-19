@@ -18,6 +18,7 @@ function SWEP:STCExecute()
     if SERVER then
         local owner = self:GetOwner()
         pointshoot.Marks[owner:EntIndex()] = table.Reverse(self.Marks)
+        pointshoot.PowerBuoyancyTime = CurTime() + 2
         self:ExecuteEffect()
         // PrintTable(pointshoot.Marks[owner:EntIndex()])
     elseif CLIENT and (not self.Marks or #self.Marks < 1) then

@@ -1,10 +1,71 @@
+local cvars = {
+    {
+        name = 'ps_buoyancy',
+        default = '0.1',
+        call = 'GetFloat',
+        widget = 'NumSlider',
+        min = 0,
+        max = 1,
+        decimals = 1,
+        help = true
+    },
+
+    {
+        name = 'ps_headshot_reward',
+        default = '0.3',
+        call = 'GetFloat',
+        widget = 'NumSlider',
+        min = 0,
+        max = 1,
+        decimals = 1,
+        help = true
+    },
+
+    {
+        name = 'ps_power_cost',
+        default = '0.1',
+        call = 'GetFloat',
+        widget = 'NumSlider',
+        min = 0,
+        max = 1,
+        decimals = 1,
+    }
+}
+for _, cvar in ipairs(cvars) do pointshoot:RegisterCVar(cvar) end
+if SERVER then 
+    cvars = nil 
+elseif CLIENT then
+    hook.Add('PopulateToolMenu', 'pointshoot.menu.power', function()
+        spawnmenu.AddToolMenuOption('Options', 
+            language.GetPhrase('#pointsh.category'), 
+            'pointshoot.menu.power', 
+            language.GetPhrase('#pointsh.menu.power'), '', '', 
+            function(panel) pointshoot:CreateCVarsMenu(panel, cvars) end
+        )
+    end)
+end
+
+pointshoot:RegisterClientToServer('CTSDecrPower')
+
+function pointshoot:CTSDecrPower(ply, delta)
+    if SERVER then 
+        local oldPower = ply:GetNW2Float('psnw_power', 1)
+        local newPower = math.Clamp(oldPower - delta, 0, 1)
+        if oldPower == newPower then return end
+        self.PowerBuoyancyTime = CurTime() + 2
+        ply:SetNW2Float('psnw_power', newPower)
+    elseif CLIENT then
+        return
+    end
+end
+
 if SERVER then
-    local checktime = 0
     local pointshoot = pointshoot
+    pointshoot.PowerBuoyancyTime = 0
     hook.Add('PlayerPostThink', 'pointshoot.buoyancy', function(ply)
         local curtime = CurTime()
-        if curtime < checktime then return end
-        checktime = curtime + 1
+        if curtime < pointshoot.PowerBuoyancyTime then return end
+        pointshoot.PowerBuoyancyTime = curtime + 1
 
         local oldPower = ply:GetNW2Float('psnw_power', 1)
         local newPower = math.Clamp(oldPower + pointshoot.CVarsCache.ps_buoyancy, 0, 1)
@@ -35,14 +96,16 @@ elseif CLIENT then
     end
     
     local ready_mat = Material('hitman/ready.png')
-    function pointshoot:DrawReadyEffect(hookname, endtime, duration)
+    function pointshoot:DrawReadyEffect(endtime, duration)
         local curtime = CurTime()
         if curtime > endtime then 
-            hook.Remove('HUDPaint', hookname)
+            self:RemoveReadyEffect()
+            return
         end
+
         local rate = Elasticity(1 - (endtime - curtime) / duration)
         local scrW, scrH = ScrW(), ScrH()
-        local size = 128 * rate
+        local size = 64 * rate
         local alpha = 400 * (1 - rate)
         local x, y = scrW * 0.5, scrH - 128
         surface.SetDrawColor(255, 255, 255, alpha)
@@ -50,18 +113,50 @@ elseif CLIENT then
         surface.DrawTexturedRectRotated(x, y, size, size, 0)
     end
 
-    function pointshoot:ReadyEffect(hookname, duration)
+    function pointshoot:EnableReadyEffect(duration)
         local endtime = CurTime() + duration
-        hook.Add('HUDPaint', hookname, function() self:DrawReadyEffect(hookname, endtime, duration) end)
+        hook.Add('HUDPaint', 'pointshoot.readyeffect', function() self:DrawReadyEffect(endtime, duration) end)
     end
 
+    function pointshoot:RemoveReadyEffect()
+        hook.Remove('HUDPaint', 'pointshoot.readyeffect')
+    end
 
+    function pointshoot:DrawPowerTick(endtime, duration)
+        if CurTime() > endtime then 
+            self:RemoveDrawPowerTick()
+            return 
+        end
+
+        local scrW, scrH = ScrW(), ScrH()
+        local w, h = scrW * 0.2, 20
+        local x = (scrW - w) * 0.5
+        local y = scrH - 3 * h
+
+        local alphaRate = math.Clamp((endtime - CurTime()) / duration, 0, 1)
+        local curpower = LocalPlayer():GetNW2Float('psnw_power', 1)
+
+        surface.SetDrawColor(170, 170, 170, 255 * alphaRate)
+        surface.DrawOutlinedRect(x, y, w, h)
+        surface.SetDrawColor(255, 255, 0, 100 * alphaRate)
+        surface.DrawRect(x, y, w * curpower, h)
+    end
+
+    function pointshoot:EnableDrawPowerTick(duration)
+        local endtime = CurTime() + duration
+        hook.Add('HUDPaint', 'pointshoot.drawpower', function() self:DrawPowerTick(endtime, duration) end)
+    end
+
+    function pointshoot:RemoveDrawPowerTick()
+        hook.Remove('HUDPaint', 'pointshoot.drawpower')
+    end
 
     hook.Add('EntityNetworkedVarChanged', 'pointshoot.power.change', function(ent, name, oldval, newval)
         if ent ~= LocalPlayer() then return end
         if name ~= 'psnw_power' then return end
-        if oldval ~= 1 and newval == 1 then
-            pointshoot:ReadyEffect('pointshoot.readyeffect', 1)
-        end
+        pointshoot:EnableDrawPowerTick(1.5)
+        // if oldval ~= 1 and newval == 1 then
+        //     pointshoot:EnableReadyEffect(1)
+        // end
     end)
 end

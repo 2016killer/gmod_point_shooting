@@ -26,14 +26,14 @@ function SWEP:DrawPower()
     end
 
     local scrW, scrH = ScrW(), ScrH()
-    local w, h = scrW * 0.2, 40
+    local w, h = scrW * 0.2, 20
     local x = (scrW - w) * 0.5
-    local y = scrH - 2 * h
+    local y = scrH - 3 * h
 
 
     surface.SetFont('DermaLarge')
 	surface.SetTextColor(255, 255, 255)
-	surface.SetTextPos(x, y - h) 
+	surface.SetTextPos(x, y - h - h) 
 	surface.DrawText(self.Clip)
 
 	surface.SetDrawColor(170, 170, 170, 255)

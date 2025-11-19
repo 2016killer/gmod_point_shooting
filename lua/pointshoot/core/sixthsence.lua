@@ -1,6 +1,63 @@
 --[[
     作者: 白狼
 ]]
+
+local cvars = {
+    {
+        name = 'ps_sixthsense_range',
+        default = '1000',
+        call = 'GetInt',
+        widget = 'NumSlider',
+        min = 100,
+        max = 2000,
+        decimals = 0,
+    },
+
+    {
+        name = 'ps_sixthsense_cost',
+        default = '0.3',
+        call = 'GetFloat',
+        widget = 'NumSlider',
+        min = 0,
+        max = 1,
+        decimals = 2,
+    },
+
+    {
+        name = 'ps_sixthsense_ent_limit',
+        default = '30',
+        call = 'GetFloat',
+        widget = 'NumSlider',
+        min = 10,
+        max = 60,
+        decimals = 0,
+    },
+
+    {
+        name = 'ps_sixthsense_duration',
+        default = '1',
+        call = 'GetFloat',
+        widget = 'NumSlider',
+        min = 0,
+        max = 5,
+        decimals = 1,
+    }
+
+}
+for _, cvar in ipairs(cvars) do pointshoot:RegisterCVar(cvar) end
+if SERVER then 
+    cvars = nil 
+elseif CLIENT then
+    hook.Add('PopulateToolMenu', 'pointshoot.menu.sixthsense', function()
+        spawnmenu.AddToolMenuOption('Options', 
+            language.GetPhrase('#pointsh.category'), 
+            'pointshoot.menu.sixthsense', 
+            language.GetPhrase('#pointsh.menu.sixthsense'), '', '', 
+            function(panel) pointshoot:CreateCVarsMenu(panel, cvars) end
+        )
+    end)
+end
+
 if SERVER then return end
 
 
@@ -20,8 +77,35 @@ local sixthsense_mat = CreateMaterial('sixthsense_mat', 'UnLitGeneric', {
 sixthsense.color1 = Color(0, 0, 0, 100)
 sixthsense.color2 = Color(255, 255, 255, 255)
 sixthsense.color3 = Color(255, 255, 255, 255)
-concommand.Add('sixthsense', function(ply, cmd, args)
+concommand.Add('sixthsense', function(ply)
+	local curpower = LocalPlayer():GetNW2Float('psnw_power', 1)
+	local powercost = pointshoot.CVarsCache.ps_sixthsense_cost
+	if curpower < powercost then 
+		return 
+	end
+
 	if not sixthsense.enable or (sixthsense.alphaRate and sixthsense.alphaRate <= 0.2) then
+		pointshoot:CallDoubleEnd('CTSDecrPower', LocalPlayer(), powercost)
+		sixthsense:Start(LocalPlayer(), 
+			pointshoot.CVarsCache.ps_sixthsense_range,
+			1,
+			pointshoot.CVarsCache.ps_sixthsense_duration,
+			pointshoot.CVarsCache.ps_sixthsense_ent_limit,
+			false
+		)
+		surface.PlaySound('dishonored/darkvision_scan.wav')
+	end
+end)
+
+concommand.Add('sixthsense_old', function(ply, cmd, args)
+	local curpower = LocalPlayer():GetNW2Float('psnw_power', 1)
+	local powercost = pointshoot.CVarsCache.ps_sixthsense_cost
+	if curpower <= powercost then 
+		return 
+	end
+
+	if not sixthsense.enable or (sixthsense.alphaRate and sixthsense.alphaRate <= 0.2) then
+		pointshoot:CallDoubleEnd('CTSDecrPower', LocalPlayer(), powercost)
 		sixthsense:Start(LocalPlayer(), unpack(args))
 		surface.PlaySound('dishonored/darkvision_scan.wav')
 	end
@@ -85,9 +169,13 @@ function sixthsense:Start(ply, targerRange, duration, durationAlpha, limitent, c
 	self.entqueue = {}
 
 	local pos = ply:GetPos()
+	local speed = self.targerRange / self.duration
 	local entities = ents.FindInSphere(
 		pos,
-		0.25 * (self.targerRange / self.duration) * self.durationAlpha + self.targerRange
+		self.targerRange + math.min(
+							0.25 * speed * math.max(self.durationAlpha - self.duration, 0), 
+							self.targerRange
+						)
 	)
 
 	table.sort(entities, function(a, b)
