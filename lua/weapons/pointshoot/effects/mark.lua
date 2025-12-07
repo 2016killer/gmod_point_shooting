@@ -1,10 +1,26 @@
 local pointshoot = pointshoot
 
-function SWEP:MarkEffect(tr)
+function SWEP:MarkEffect(mark)
 	if SERVER then
 		return
 	elseif CLIENT then
-		surface.PlaySound('hitman/mark.mp3')
+        if not istable(mark) then
+            return
+        end
+
+        if #self.Marks == 1 then
+            if not mark[1] then
+                surface.PlaySound('hitman/mark1f.mp3')
+            else
+                surface.PlaySound('hitman/mark2f.mp3')
+            end
+        else
+            if not mark[1] then
+                surface.PlaySound('hitman/mark1.mp3')
+            else
+                surface.PlaySound('hitman/mark2.mp3')
+            end
+        end
 	end
 end
 

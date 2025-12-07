@@ -11,9 +11,9 @@ function SWEP:PowerThink()
     local dt = self.drawdt or RealFrameTime()
     self.Power = self.Power - math.abs(dt * self.PowerCost)
 
-    if not self.PowerTimeOutEffectLock and self.Power <= self.PowerCost then
-        self:PowerTimeOutEffect()
-        self.PowerTimeOutEffectLock = true
+    if not self.PowerTiredEffectLock and self.Power <= self.PowerCost then
+        self:PowerTiredEffect()
+        self.PowerTiredEffectLock = true
     end
 
     return self.Power <= 0 
@@ -42,8 +42,8 @@ function SWEP:DrawPower()
     surface.DrawRect(x, y, w * self.Power, h)
 end
 
-function SWEP:PowerTimeOutEffect()
-    surface.PlaySound('hitman/clock.mp3')
+function SWEP:PowerTiredEffect()
+    surface.PlaySound('hitman/tired.mp3')
 end
 
 

@@ -44,3 +44,10 @@ function SWEP:STCExecute()
         )
     end
 end
+
+SWEP:RegisterClientToServer('CTSCancel')
+
+function SWEP:CTSCancel(endpower)
+    self.Marks = {}
+    self:CTSExecuteRequest(endpower)
+end

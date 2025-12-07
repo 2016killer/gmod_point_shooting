@@ -174,35 +174,49 @@ function SWEP:Holster()
     return true
 end
 
+function SWEP:IsKeyDown(key)
+    if key == 0 then
+        return true
+    else
+        return input.IsKeyDown(key) or input.IsMouseDown(key)
+    end
+end
+
 function SWEP:Think()
 	if SERVER or self.LockThink then return end
+    if gui.IsGameUIVisible() then return end
 
 	local owner = self:GetOwner()
 	if not IsValid(owner) or not owner:IsPlayer() then 
 		return 
 	end
 
-    local attackKeyDown = game.SinglePlayer() and owner:KeyDown(IN_ATTACK) or input.IsMouseDown(MOUSE_LEFT)
-    if not self.attackKey and attackKeyDown then
-        self:MouseLeftPress()
+    local markKeyDown = self:IsKeyDown(pointshoot.CVarsCache.ps_key_mark)
+    if not self.markKeyDown and markKeyDown then
+        if not self.Clip or self.Clip <= 0 then 
+            return
+        end
+        local mark = pointshoot:PackMark(pointshoot:TracePenetration())
+        self:CallDoubleEnd('CTSAddMarks', mark)
+        self:MarkEffect(mark)
+        self.Clip = self.Clip - 1
     end
-    self.attackKey = attackKeyDown
+    self.markKeyDown = markKeyDown
 
 
-    local rightKeyDown = game.SinglePlayer() and owner:KeyDown(IN_ATTACK2) or input.IsMouseDown(MOUSE_RIGHT)
-    if rightKeyDown or self:PowerThink() then
+    local executeKeyDown = self:IsKeyDown(pointshoot.CVarsCache.ps_key_execute)
+    if executeKeyDown or self:PowerThink() then
         self.LockThink = true
         self:CallDoubleEnd('CTSExecuteRequest', self.Power)
         self:ClearPowerCost()
         return
     end
-end
 
-function SWEP:MouseLeftPress()
-    if not self.Clip or self.Clip <= 0 then 
+    local cancelKeyDown = self:IsKeyDown(pointshoot.CVarsCache.ps_key_cancel)
+    if cancelKeyDown then
+        self.LockThink = true
+        self:CallDoubleEnd('CTSCancel', self.Power)
+        self:ClearPowerCost()
         return
     end
-    self:CallDoubleEnd('CTSAddMarks', pointshoot:PackMark(pointshoot:TracePenetration()))
-    self:MarkEffect()
-    self.Clip = self.Clip - 1
 end

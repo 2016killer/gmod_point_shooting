@@ -6,7 +6,7 @@ pointshoot.emptyfunc = function() end
 pointshoot.WhiteList = pointshoot.WhiteList or {}
 pointshoot.WhiteListBase = pointshoot.WhiteListBase or {}
 pointshoot.Marks = {}
-pointshoot.Version = 'Version: beta'
+pointshoot.Version = 'Version: beta2'
 
 pointshoot.CVarsCache = {}
 pointshoot.CVars = {}
@@ -248,6 +248,12 @@ function pointshoot:RegisterCVar(cvardata)
     self:UpdateCVarCache(cvardata)
 end
 
+function pointshoot:RegisterClientCVar(cvardata)
+    CreateClientConVar(cvardata.name, tostring(cvardata.default), true, false, '')
+	table.insert(self.CVars, cvardata)
+    self:UpdateCVarCache(cvardata)
+end
+
 
 local function GetConVarPhrase(name)
 	-- 替换第一个下划线为点号
@@ -278,6 +284,8 @@ function pointshoot:CreateCVarsMenu(panel, cvars)
 			panel:CheckBox(label, name)
 		elseif widget == 'TextEntry' then
 			panel:TextEntry(label, name)
+        elseif widget == 'KeyBinder' then
+			panel:KeyBinder(label, name, nil, nil)
 		end
 
 		if v.help then
