@@ -157,11 +157,17 @@ sixthsense.Filter = function(ent)
 	end
 
 	if class == 'npc_grenade_frag' then
+		if IsValid(ent.psss_skin) then
+			ent.psss_skin:Remove()
+		end
+
 		local grenade = ClientsideModel(ent:GetModel())
 		grenade:SetPos(ent:GetPos())
 		grenade:SetAngles(ent:GetAngles())
 		grenade:SetParent(ent)
 		grenade:SetNoDraw(true)
+
+		ent.psss_skin = grenade
 
 		ent:CallOnRemove('sixthsense_grenade', function() if IsValid(grenade) then grenade:Remove() end end)
 
@@ -217,14 +223,10 @@ function sixthsense:Start(ply, targetRange, duration, durationAlpha, limitent, c
 			continue 
 		end
 
-		if IsValid(entOverride) then 
-			ent = entOverride
-		end
-
 		table.insert(
 			weightTable, 
 			{
-				ent = ent, 
+				ent = IsValid(entOverride) and entOverride or ent, 
 				priority = (ent:GetPos() - pos):LengthSqr() / rangeSqr + priority
 			}
 		)
@@ -241,6 +243,8 @@ function sixthsense:Start(ply, targetRange, duration, durationAlpha, limitent, c
 	self.cycle = cycle
 	self.StartTime = RealTime()
 	self.enable = true
+
+	hook.Run('SixthSenseStart')
 end
 
 function sixthsense:Clean()
@@ -278,6 +282,7 @@ function sixthsense:Think()
 		end
 		self:Start(LocalPlayer(), self.targetRange, self.duration, self.durationAlpha, self.limitent, self.cycle)
 		surface.PlaySound('dishonored/darkvision_scan.wav')
+		hook.Run('SixthSenseEnd')
 	end
 end
 

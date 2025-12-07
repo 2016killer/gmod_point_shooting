@@ -6,10 +6,16 @@ local function filter(ent)
 	local class = ent:GetClass()
 
 	if class == 'npc_grenade_frag' then
+		if IsValid(ent.psss_skin) then
+			ent.psss_skin:Remove()
+		end
+
 		local grenade = ClientsideModel(ent:GetModel())
 		grenade:SetPos(ent:GetPos())
 		grenade:SetAngles(ent:GetAngles())
 		grenade:SetParent(ent)
+
+		ent.psss_skin = grenade
 
 		ent:CallOnRemove('sixthsense_grenade', function() if IsValid(grenade) then grenade:Remove() end end)
 
@@ -18,11 +24,18 @@ local function filter(ent)
 
 	if ent:IsNPC() then
 		if ent:LookupBone('ValveBiped.Bip01_Head1') then
+			if IsValid(ent.psss_skin) then
+				ent.psss_skin:Remove()
+			end
+
 			local skeleton = ClientsideModel('models/player/skeleton.mdl', RENDERGROUP_OTHER)
 			skeleton:SetParent(ent)
 			skeleton:AddEffects(EF_BONEMERGE)
 			skeleton:SetNoDraw(true)
-			skeleton.IsSkeleton = true
+
+			ent.psss_skin = skeleton
+
+			ent:CallOnRemove('sixthsense_skeleton', function() if IsValid(skeleton) then skeleton:Remove() end end)
 
 			return 0, skeleton
 		else
@@ -43,6 +56,11 @@ function SWEP:StartEffect(ply)
 	elseif CLIENT then
 		surface.PlaySound('hitman/start.mp3')
 		self:ScreenFlash(150, 0, 0.2)
+
+		local succ, err = pcall(sixthsense.Start, sixthsense, LocalPlayer(), 500, 0.1, 0.5, 30, false, filter)
+		if not succ then
+			print('[PointShooting]: sixthsense.Start failed:', err)
+		end
 
 		local emitter = ParticleEmitter(LocalPlayer():GetPos())
 		local center = LocalPlayer():GetPos()
@@ -68,20 +86,6 @@ function SWEP:StartEffect(ply)
 		end
 		emitter:Finish()
 		
-		local succ, err = pcall(sixthsense.Start, sixthsense, LocalPlayer(), 500, 0.1, 0.5, 30, false, filter)
-		if not succ then
-			print('[PointShooting]: sixthsense.Start failed:', err)
-		else
-			local skeletonList = sixthsense.entqueue
-			timer.Simple(2, function()
-				for i, skeleton in pairs(skeletonList) do
-					if not IsValid(skeleton) or not skeleton.IsSkeleton then
-						continue
-					end
-					skeleton:Remove()
-				end
-			end)
-		end
 	end
 end
 
