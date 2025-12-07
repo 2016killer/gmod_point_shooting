@@ -1,3 +1,42 @@
+local function filter(ent)
+	if ent:GetOwner() == LocalPlayer() or ent:GetParent() == LocalPlayer() then
+		return nil
+	end
+
+	local class = ent:GetClass()
+
+	if class == 'npc_grenade_frag' then
+		local grenade = ClientsideModel(ent:GetModel())
+		grenade:SetPos(ent:GetPos())
+		grenade:SetAngles(ent:GetAngles())
+		grenade:SetParent(ent)
+
+		ent:CallOnRemove('sixthsense_grenade', function() if IsValid(grenade) then grenade:Remove() end end)
+
+		return 0, grenade
+	end
+
+	if ent:IsNPC() then
+		if ent:LookupBone('ValveBiped.Bip01_Head1') then
+			local skeleton = ClientsideModel('models/player/skeleton.mdl', RENDERGROUP_OTHER)
+			skeleton:SetParent(ent)
+			skeleton:AddEffects(EF_BONEMERGE)
+			skeleton:SetNoDraw(true)
+			skeleton.IsSkeleton = true
+
+			return 0, skeleton
+		else
+			return 0
+		end
+	end
+
+	if ent:GetMaxHealth() > 2 then
+		return 1
+	end
+
+	return nil
+end
+
 function SWEP:StartEffect(ply)
 	if SERVER then
 		pointshoot:TimeScaleFadeIn(0, 0.1)
@@ -29,36 +68,20 @@ function SWEP:StartEffect(ply)
 		end
 		emitter:Finish()
 		
-
-		sixthsense:Start(LocalPlayer(), 500, 0.1, 0.5, 30, nil)
-		sixthsense.enable = false
-		
-		for i = #sixthsense.entqueue, 1, -1 do
-			local ent = sixthsense.entqueue[i]
-			if not ent.remove and (not IsValid(ent) or ent:GetMaxHealth() <= 2) then
-				table.remove(sixthsense.entqueue, i)
-				continue
-			end
-			if ent:LookupBone('ValveBiped.Bip01_Head1') then
-				local skeleton = ClientsideModel('models/player/skeleton.mdl', RENDERGROUP_OTHER)
-				skeleton:SetParent(ent)
-				skeleton:AddEffects(EF_BONEMERGE)
-				skeleton:SetNoDraw(true)
-				skeleton.remove = true
-				sixthsense.entqueue[i] = skeleton
-			end
-		end
-		local skeletonList = sixthsense.entqueue
-		timer.Simple(2, function()
-			for i, skeleton in pairs(skeletonList) do
-				if not IsValid(skeleton) or not skeleton.remove then
-					continue
+		local succ, err = pcall(sixthsense.Start, sixthsense, LocalPlayer(), 500, 0.1, 0.5, 30, false, filter)
+		if not succ then
+			print('[PointShooting]: sixthsense.Start failed:', err)
+		else
+			local skeletonList = sixthsense.entqueue
+			timer.Simple(2, function()
+				for i, skeleton in pairs(skeletonList) do
+					if not IsValid(skeleton) or not skeleton.IsSkeleton then
+						continue
+					end
+					skeleton:Remove()
 				end
-				skeleton:Remove()
-			end
-		end)
-		sixthsense.enable = true
-		surface.PlaySound('dishonored/darkvision_scan.wav')
+			end)
+		end
 	end
 end
 

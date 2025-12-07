@@ -112,42 +112,72 @@ concommand.Add('sixthsense_old', function(ply, cmd, args)
 end)
 
 sixthsense.WhiteList = {
-	['combine_mine'] = true,
-	['combine_mine_resistance'] = true,
+	['combine_mine'] = 0,
+	['grenade_helicopter'] = 0,
+	['item_ammo_357'] = 1,
+	['item_ammo_357_large'] = 1,
+	['item_ammo_ar2'] = 1,
+	['item_ammo_ar2_altfire'] = 1,
+	['item_ammo_ar2_large'] = 1,
+	['item_ammo_crossbow'] = 1,
+	['item_ammo_pistol'] = 1,
+	['item_ammo_pistol_large'] = 1,
+	['item_ammo_smg1'] = 1,
+	['item_ammo_smg1_grenade'] = 1,
+	['item_ammo_smg1_large'] = 1,
+	['item_battery'] = 1,
+	['item_box_buckshot'] = 1,
+	['item_healthcharger'] = 1,
+	['item_healthkit'] = 1,
+	['item_healthvial'] = 1,
+	['item_rpg_round'] = 1,
+	['item_suitcharger'] = 1,
+	['combine_mine_resistance'] = 1,
 }
 
-function sixthsense:Filter(ent)
-	if not IsValid(ent) then
-		return nil
-	elseif not isfunction(ent.DrawModel) or not ent:GetModel() then
+sixthsense.BlackList = {
+	['mg_viewmodel'] = -1,
+	['lg_ragdoll'] = -1,
+}
+
+
+sixthsense.Filter = function(ent)
+	if ent:GetOwner() == LocalPlayer() or ent:GetParent() == LocalPlayer() then
 		return nil
 	end
 
 	local class = ent:GetClass()
-	if string.StartWith(class, 'mg_') then
+
+	if sixthsense.WhiteList[class] then
+		return sixthsense.WhiteList[class]
+	end
+
+	if sixthsense.BlackList[class] then
 		return nil
-	elseif class == 'npc_grenade_frag' then
+	end
+
+	if class == 'npc_grenade_frag' then
 		local grenade = ClientsideModel(ent:GetModel())
 		grenade:SetPos(ent:GetPos())
 		grenade:SetAngles(ent:GetAngles())
 		grenade:SetParent(ent)
-		grenade.remove = true
-		table.insert(self.entqueue, grenade)
+		grenade:SetNoDraw(true)
 
 		ent:CallOnRemove('sixthsense_grenade', function() if IsValid(grenade) then grenade:Remove() end end)
 
-		return grenade
-	elseif self.WhiteList[class] then
-		return ent
+		return 0, grenade
 	end
 
-
-	if ent:IsRagdoll() or ent:GetOwner() == LocalPlayer() or ent:GetParent() == LocalPlayer() or class == 'lg_ragdoll' then
-		return nil
+	if ent:IsNPC() then
+		return 0
 	end
 
-	if ent:GetMaxHealth() > 2 or ent:IsNPC() or scripted_ents.GetStored(class) or ent:IsVehicle() or ent:IsWeapon() or class == 'prop_dynamic' then
-		return ent
+	if ent:GetMaxHealth() > 2 or scripted_ents.GetStored(class) or ent:IsWeapon() or class == 'prop_dynamic' then
+		return 1
+	end
+
+	if ent:IsVehicle() then
+		return 2
 	end
 
 	return nil
@@ -157,11 +187,11 @@ local function ClampAbs(num, min, max)
 	return math.Clamp(math.abs(num), min, max)
 end
 
-function sixthsense:Start(ply, targerRange, duration, durationAlpha, limitent, cycle)
+function sixthsense:Start(ply, targetRange, duration, durationAlpha, limitent, cycle, filterOverride)
 	self.curRange = 0
 	self.alphaRate = 1
 
-	self.targerRange = ClampAbs(targerRange or 1000, 1, 10000)
+	self.targetRange = ClampAbs(targetRange or 1000, 1, 10000)
 	self.limitent = ClampAbs(limitent or 30, 5, 100)
 	self.duration = ClampAbs(duration or 1, 0.1, 10)
 	self.durationAlpha = ClampAbs(durationAlpha or 2, 0.1, 10)
@@ -169,28 +199,43 @@ function sixthsense:Start(ply, targerRange, duration, durationAlpha, limitent, c
 	self.entqueue = {}
 
 	local pos = ply:GetPos()
-	local speed = self.targerRange / self.duration
-	local entities = ents.FindInSphere(
-		pos,
-		self.targerRange + math.min(
-							0.25 * speed * math.max(self.durationAlpha - self.duration, 0), 
-							self.targerRange
-						)
-	)
-
-	table.sort(entities, function(a, b)
-		return (a:GetPos() - pos):LengthSqr() < (b:GetPos() - pos):LengthSqr()
-	end)
-
-	for i, ent in ipairs(entities) do
-		if #self.entqueue >= self.limitent then
-			break
+	local range = math.min(self.targetRange + 0.75 * (self.targetRange / self.duration) * self.durationAlpha, 2 * self.targetRange)
+	local entities = ents.FindInSphere(pos, range)
+	
+	local filter = filterOverride or self.Filter
+	local rangeSqr = range * range
+	local weightTable = {}
+	for i, ent in ipairs(entities) do 
+		if not IsValid(ent) then
+			continue
+		elseif not isfunction(ent.DrawModel) then
+			continue
 		end
 
-		ent = self:Filter(ent)
-		if ent then
-			table.insert(self.entqueue, ent)
+		local priority, entOverride = filter(ent)
+		if priority == nil then 
+			continue 
 		end
+
+		if IsValid(entOverride) then 
+			ent = entOverride
+		end
+
+		table.insert(
+			weightTable, 
+			{
+				ent = ent, 
+				priority = (ent:GetPos() - pos):LengthSqr() / rangeSqr + priority
+			}
+		)
+	end
+
+	table.sort(weightTable, function(a, b) return a.priority < b.priority end)
+
+	// PrintTable(weightTable)
+
+	for i = 1, math.min(self.limitent, #weightTable) do
+		table.insert(self.entqueue, weightTable[i].ent)
 	end
 
 	self.cycle = cycle
@@ -203,7 +248,7 @@ function sixthsense:Clean()
 	self.curRange = nil
 	self.alphaRate = nil
 	
-	self.targerRange = nil
+	self.targetRange = nil
 	self.limitent = nil
 	self.duration = nil
 	self.durationAlpha = nil
@@ -221,7 +266,7 @@ function sixthsense:Think()
 	local dt = RealTime() - self.StartTime
 	local rate = dt / self.duration
 
-	self.curRange = rate * self.targerRange
+	self.curRange = rate * self.targetRange
 	if dt >= self.duration then
 		self.alphaRate = math.Clamp(1 - (dt - self.duration) / self.durationAlpha, 0, 1)
 	end
@@ -231,7 +276,7 @@ function sixthsense:Think()
 			self:Clean()
 			return
 		end
-		self:Start(LocalPlayer(), self.targerRange, self.duration, self.durationAlpha, self.limitent, self.oneshot)
+		self:Start(LocalPlayer(), self.targetRange, self.duration, self.durationAlpha, self.limitent, self.cycle)
 		surface.PlaySound('dishonored/darkvision_scan.wav')
 	end
 end
@@ -327,7 +372,8 @@ hook.Add('PostDrawOpaqueRenderables', 'sixthsense', function()
 	local succ, err = pcall(sixthsense.Draw, sixthsense)
 	if not succ then
 		print(err)
-		render.SuppressEngineLighting(true)
+		render.SuppressEngineLighting(false)
 		render.SetStencilEnable(false)
+		render.MaterialOverride(nil)
 	end
 end)
