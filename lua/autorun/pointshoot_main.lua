@@ -129,13 +129,16 @@ function pointshoot:TracePenetration(dis)
     local filter = {LocalPlayer()}
     local start = LocalPlayer():EyePos()
 
-    local dir = LocalPlayer():GetAimVector()
+    // local dir = LocalPlayer():GetAimVector()
+    local dir = (LocalPlayer():EyeAngles() + LocalPlayer():GetViewPunchAngles()):Forward()
     local tr = util.TraceLine({
         start = start,
         endpos = start + dir * dis,
         filter = filter,
         mask = MASK_SHOT
     })
+
+    // debugoverlay.Sphere(tr.HitPos, 5, 5, Color(255, 0, 0))
 
     if tr.Entity:IsNPC() or tr.Entity:IsPlayer() then
         return tr
