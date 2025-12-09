@@ -6,7 +6,7 @@ pointshoot.emptyfunc = function() end
 pointshoot.WhiteList = pointshoot.WhiteList or {}
 pointshoot.WhiteListBase = pointshoot.WhiteListBase or {}
 pointshoot.Marks = {}
-pointshoot.Version = 'Version: beta2'
+pointshoot.Version = '1.0.0'
 
 pointshoot.CVarsCache = {}
 pointshoot.CVars = {}

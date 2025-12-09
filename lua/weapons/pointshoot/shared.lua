@@ -200,6 +200,14 @@ function SWEP:Think()
         self:CallDoubleEnd('CTSAddMarks', mark)
         self:MarkEffect(mark)
         self.Clip = self.Clip - 1
+
+        if self.Clip <= 0 then
+            self.LockThink = true
+            self:CallDoubleEnd('CTSExecuteRequest', self.Power)
+            self:ClearPowerCost()
+            
+            return
+        end
     end
     self.markKeyDown = markKeyDown
 
